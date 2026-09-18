@@ -1,0 +1,24 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.13.2, pytest-9.1.1, pluggy-1.5.0 -- /opt/homebrew/Caskroom/miniconda/base/bin/python3
+cachedir: .pytest_cache
+rootdir: /private/tmp/pyfail
+configfile: pyproject.toml
+testpaths: tests
+plugins: anyio-4.12.0
+collecting ... collected 2 items
+
+tests/test_add.py::test_add FAILED                                       [ 50%]
+tests/test_add.py::test_regression PASSED                                [100%]
+
+=================================== FAILURES ===================================
+___________________________________ test_add ___________________________________
+
+>   def test_add(): assert add(1,2)==999
+                    ^^^^^^^^^^^^^^^^^^^^
+E   assert 3 == 999
+E    +  where 3 = add(1, 2)
+
+tests/test_add.py:2: AssertionError
+=========================== short test summary info ============================
+FAILED tests/test_add.py::test_add - assert 3 == 999
+========================= 1 failed, 1 passed in 0.02s ==========================

@@ -1,0 +1,57 @@
+# Binaries
+/vouch
+/dist/
+*.exe
+*.test
+*.out
+
+# Go build cache
+/vendor/
+
+# Vouch runtime artifacts (never commit evidence)
+.vouch/
+.vouch-cache/
+*-worktree/
+*.log
+
+# Test artifacts
+/testdata/fixtures/*/node_modules/
+/testdata/fixtures/*/.vouch/
+coverage.out
+coverage.html
+
+# OS / Editor
+.DS_Store
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Release
+*.tar.gz
+*.zip
+# Vouch specific (PLAN-V2 §5, §10)
+.vouch/bundles/
+.vouch/cache/
+.vouch/probes/
+tmp-*-worktree/
+# Local build output. Anchored: an unanchored "bin/" also hid
+# npm/vouch/bin/vouch.js (the wrapper's launcher is source, not an artifact).
+/bin/
+# Platform packages ship a binary that build.sh injects from dist/; the
+# directory is kept in git via .gitkeep so `cp` works on a clean checkout.
+npm/platforms/*/bin/vouch
+npm/platforms/*/bin/vouch.exe
+.cursor/
+.pi/
+.vouch/tmp-*/
+# Fixture products (never commit evidence, keep fixtures minimal)
+testdata/**/__pycache__/
+testdata/**/.pytest_cache/
+testdata/**/package-lock.json
+testdata/**/node_modules/
+
+# Internal planning docs and product mockups — kept local, not published.
+PLAN.md
+PLAN-V2.md
+vouch-product-*.html

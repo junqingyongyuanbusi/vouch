@@ -1,0 +1,13 @@
+{"Time":"2026-09-15T22:51:46.774267-07:00","Action":"start","Package":"fixture/gofail"}
+{"Time":"2026-09-15T22:51:47.016264-07:00","Action":"run","Package":"fixture/gofail","Test":"TestOK"}
+{"Time":"2026-09-15T22:51:47.016312-07:00","Action":"output","Package":"fixture/gofail","Test":"TestOK","Output":"=== RUN   TestOK\n"}
+{"Time":"2026-09-15T22:51:47.01635-07:00","Action":"output","Package":"fixture/gofail","Test":"TestOK","Output":"--- PASS: TestOK (0.00s)\n"}
+{"Time":"2026-09-15T22:51:47.016355-07:00","Action":"pass","Package":"fixture/gofail","Test":"TestOK","Elapsed":0}
+{"Time":"2026-09-15T22:51:47.016363-07:00","Action":"run","Package":"fixture/gofail","Test":"TestBad"}
+{"Time":"2026-09-15T22:51:47.016367-07:00","Action":"output","Package":"fixture/gofail","Test":"TestBad","Output":"=== RUN   TestBad\n"}
+{"Time":"2026-09-15T22:51:47.016371-07:00","Action":"output","Package":"fixture/gofail","Test":"TestBad","Output":"    x_test.go:4: boom: got 1 want 2\n"}
+{"Time":"2026-09-15T22:51:47.016381-07:00","Action":"output","Package":"fixture/gofail","Test":"TestBad","Output":"--- FAIL: TestBad (0.00s)\n"}
+{"Time":"2026-09-15T22:51:47.016388-07:00","Action":"fail","Package":"fixture/gofail","Test":"TestBad","Elapsed":0}
+{"Time":"2026-09-15T22:51:47.016393-07:00","Action":"output","Package":"fixture/gofail","Output":"FAIL\n"}
+{"Time":"2026-09-15T22:51:47.016775-07:00","Action":"output","Package":"fixture/gofail","Output":"FAIL\tfixture/gofail\t0.242s\n"}
+{"Time":"2026-09-15T22:51:47.016787-07:00","Action":"fail","Package":"fixture/gofail","Elapsed":0.243}

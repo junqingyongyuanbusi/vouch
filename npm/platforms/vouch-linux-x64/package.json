@@ -1,0 +1,18 @@
+{
+  "name": "@vouch/cli-linux-x64",
+  "version": "0.1.0",
+  "description": "VOUCH binary for linux-x64",
+  "license": "Apache-2.0",
+  "os": [
+    "linux"
+  ],
+  "cpu": [
+    "x64"
+  ],
+  "files": [
+    "bin/vouch"
+  ],
+  "bin": {
+    "vouch": "bin/vouch"
+  }
+}

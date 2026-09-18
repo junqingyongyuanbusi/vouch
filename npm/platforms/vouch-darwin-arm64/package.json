@@ -1,0 +1,18 @@
+{
+  "name": "@vouch/cli-darwin-arm64",
+  "version": "0.1.0",
+  "description": "VOUCH binary for darwin-arm64",
+  "license": "Apache-2.0",
+  "os": [
+    "darwin"
+  ],
+  "cpu": [
+    "arm64"
+  ],
+  "files": [
+    "bin/vouch"
+  ],
+  "bin": {
+    "vouch": "bin/vouch"
+  }
+}

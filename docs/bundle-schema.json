@@ -1,0 +1,428 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://vouch.dev/schema/bundle/v1.json",
+  "title": "VOUCH ProofBundle v1",
+  "description": "Content-addressed evidence bundle — deterministic evidence and inferred opinions are physically separated. Empty deterministic set → UNVERIFIED.",
+  "type": "object",
+  "required": [
+    "bundle_id",
+    "created_at",
+    "subject",
+    "profile",
+    "evidence",
+    "inferences",
+    "verdict",
+    "schema_version"
+  ],
+  "properties": {
+    "bundle_id": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{6,12}$",
+      "description": "Short content hash, used in paths and rerun commands"
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "schema_version": {
+      "type": "integer",
+      "const": 1
+    },
+    "vouch_version": {
+      "type": "string",
+      "examples": [
+        "0.1.0"
+      ]
+    },
+    "subject": {
+      "type": "object",
+      "required": [
+        "repo_root",
+        "base_ref",
+        "diff_sha256"
+      ],
+      "properties": {
+        "repo_root": {
+          "type": "string"
+        },
+        "base_ref": {
+          "type": "string",
+          "description": "Base commit SHA or ref"
+        },
+        "candidate_ref": {
+          "type": "string"
+        },
+        "diff_sha256": {
+          "type": "string",
+          "pattern": "^sha256:[a-f0-9]{64}$"
+        },
+        "intent": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "User-provided intent, may be null"
+        }
+      }
+    },
+    "profile": {
+      "$ref": "#/$defs/ProjectProfile"
+    },
+    "evidence": {
+      "type": "array",
+      "description": "Deterministic evidence only. May be empty → verdict must be UNVERIFIED.",
+      "items": {
+        "$ref": "#/$defs/Evidence"
+      }
+    },
+    "inferences": {
+      "type": "array",
+      "description": "Inferred opinions (LLM scope/risk, open-code-review). Never participates in verdict.",
+      "items": {
+        "$ref": "#/$defs/Inference"
+      }
+    },
+    "verdict": {
+      "type": "string",
+      "enum": [
+        "VERIFIED",
+        "BROKEN",
+        "UNVERIFIED"
+      ],
+      "description": "Aggregated from evidence only. Empty evidence → UNVERIFIED."
+    },
+    "baseline_summary": {
+      "type": "object",
+      "description": "Required when verdict is VERIFIED (v2)",
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": [
+            "all_green",
+            "existing_failures",
+            "existing_broken"
+          ]
+        },
+        "failing": {
+          "type": "integer",
+          "minimum": 0
+        }
+      },
+      "required": [
+        "status"
+      ]
+    },
+    "unverified_claims": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Budget-trimmed or inconclusive claims"
+    }
+  },
+  "$defs": {
+    "Evidence": {
+      "type": "object",
+      "required": [
+        "id",
+        "claim",
+        "kind",
+        "probe",
+        "method",
+        "baseline",
+        "candidate",
+        "delta",
+        "verdict",
+        "reproduce",
+        "started_at",
+        "env_fingerprint"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^ev_[a-f0-9]{6}$"
+        },
+        "claim": {
+          "type": "string"
+        },
+        "kind": {
+          "type": "string",
+          "const": "deterministic"
+        },
+        "probe": {
+          "type": "string",
+          "examples": [
+            "test",
+            "build",
+            "typecheck"
+          ]
+        },
+        "method": {
+          "type": "string",
+          "description": "How evidence was produced, including arbitration note"
+        },
+        "baseline": {
+          "type": "object",
+          "properties": {
+            "pass": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "fail": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "skip": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "duration_ms": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "status": {
+              "type": "string",
+              "enum": [
+                "all_green",
+                "existing_failures",
+                "existing_broken"
+              ]
+            }
+          },
+          "required": [
+            "status"
+          ]
+        },
+        "candidate": {
+          "type": "object",
+          "properties": {
+            "pass": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "fail": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "skip": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "duration_ms": {
+              "type": "integer",
+              "minimum": 0
+            }
+          }
+        },
+        "delta": {
+          "type": "object",
+          "required": [
+            "regressions",
+            "new_passing",
+            "removed_tests",
+            "skip_changes",
+            "flaky_absorbed"
+          ],
+          "properties": {
+            "regressions": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "new_passing": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "removed_tests": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Tests deleted in candidate that were failing in base — shown as warning even when VERIFIED"
+            },
+            "skip_changes": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "flaky_absorbed": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "verdict": {
+          "type": "string",
+          "enum": [
+            "pass",
+            "fail",
+            "inconclusive"
+          ]
+        },
+        "reproduce": {
+          "type": "string",
+          "pattern": "^vouch rerun ",
+          "description": "Required — evidence without reproduce is not storable"
+        },
+        "logs": {
+          "type": "string"
+        },
+        "started_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "env_fingerprint": {
+          "type": "string",
+          "pattern": "^sha256:[a-f0-9]{64}$"
+        },
+        "failures": {
+          "type": "array",
+          "description": "Candidate-side failure messages for the cases in delta.regressions",
+          "items": {
+            "type": "object",
+            "required": [
+              "id",
+              "message"
+            ],
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "message": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    },
+    "Inference": {
+      "type": "object",
+      "required": [
+        "id",
+        "kind",
+        "probe",
+        "msg"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^inf_"
+        },
+        "kind": {
+          "type": "string",
+          "const": "inferred"
+        },
+        "probe": {
+          "type": "string",
+          "examples": [
+            "scope",
+            "risk",
+            "open-code-review"
+          ]
+        },
+        "msg": {
+          "type": "string"
+        },
+        "refs": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "ProjectProfile": {
+      "type": "object",
+      "required": [
+        "language",
+        "package_manager",
+        "commands",
+        "confidence"
+      ],
+      "properties": {
+        "language": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "package_manager": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "commands": {
+          "type": "object",
+          "properties": {
+            "build": {
+              "$ref": "#/$defs/Command"
+            },
+            "test": {
+              "$ref": "#/$defs/Command"
+            },
+            "typecheck": {
+              "$ref": "#/$defs/Command"
+            }
+          },
+          "additionalProperties": {
+            "$ref": "#/$defs/Command"
+          }
+        },
+        "test_selection": {
+          "type": "object",
+          "properties": {
+            "supported": {
+              "type": "boolean"
+            },
+            "mechanism": {
+              "type": "string",
+              "examples": [
+                "vitest related",
+                "go list",
+                "pytest path-map"
+              ]
+            }
+          }
+        },
+        "confidence": {
+          "type": "string",
+          "enum": [
+            "high",
+            "medium",
+            "low"
+          ]
+        },
+        "gaps": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "Command": {
+      "type": "object",
+      "required": [
+        "cmd",
+        "source"
+      ],
+      "properties": {
+        "cmd": {
+          "type": "string"
+        },
+        "source": {
+          "type": "string",
+          "description": "e.g. .github/workflows/ci.yml#L23 or package.json#scripts.test"
+        }
+      }
+    }
+  }
+}

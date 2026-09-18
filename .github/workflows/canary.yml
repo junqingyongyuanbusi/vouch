@@ -1,0 +1,41 @@
+name: canary
+
+# Nightly verify-level canary: runs the real `vouch verify` against 10 real
+# repositories and enforces the P1 acceptance gates:
+#   - three-state success >= 7/10
+#   - UNVERIFIED rate <= 20%
+#   - incremental P50 <= 60s
+on:
+  schedule:
+    - cron: "0 3 * * *"
+  workflow_dispatch:
+
+jobs:
+  verify-canary:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.24"
+          cache: true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: python prerequisites
+        run: python3 -m pip install --quiet pytest
+      - name: build vouch
+        run: go build -o /tmp/vouch ./cmd/vouch
+      - name: run verify canary
+        env:
+          VOUCH_BIN: /tmp/vouch
+          CANARY_CACHE: ${{ runner.temp }}/vouch-canary
+        run: bash scripts/canary/verify.sh | tee canary-summary.txt
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: canary-summary
+          path: |
+            canary-summary.txt
+            ${{ runner.temp }}/vouch-canary/results.tsv

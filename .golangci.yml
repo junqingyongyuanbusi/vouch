@@ -1,0 +1,21 @@
+version: "2"
+linters:
+  enable:
+    - govet
+    - errcheck
+    - staticcheck
+    - unused
+    - misspell
+    - unconvert
+    - unparam
+  disable:
+    - exhaustruct
+formatters:
+  enable:
+    - gofmt
+    - goimports
+run:
+  timeout: 5m
+issues:
+  max-issues-per-linter: 50
+  max-same-issues: 20

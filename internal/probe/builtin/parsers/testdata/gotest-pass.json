@@ -1,0 +1,12 @@
+{"Time":"2026-09-15T22:51:38.731491-07:00","Action":"start","Package":"fixture/go-std"}
+{"Time":"2026-09-15T22:51:39.260894-07:00","Action":"run","Package":"fixture/go-std","Test":"TestAdd"}
+{"Time":"2026-09-15T22:51:39.260954-07:00","Action":"output","Package":"fixture/go-std","Test":"TestAdd","Output":"=== RUN   TestAdd\n"}
+{"Time":"2026-09-15T22:51:39.261049-07:00","Action":"output","Package":"fixture/go-std","Test":"TestAdd","Output":"--- PASS: TestAdd (0.00s)\n"}
+{"Time":"2026-09-15T22:51:39.26107-07:00","Action":"pass","Package":"fixture/go-std","Test":"TestAdd","Elapsed":0}
+{"Time":"2026-09-15T22:51:39.26108-07:00","Action":"run","Package":"fixture/go-std","Test":"TestRegression"}
+{"Time":"2026-09-15T22:51:39.261087-07:00","Action":"output","Package":"fixture/go-std","Test":"TestRegression","Output":"=== RUN   TestRegression\n"}
+{"Time":"2026-09-15T22:51:39.261117-07:00","Action":"output","Package":"fixture/go-std","Test":"TestRegression","Output":"--- PASS: TestRegression (0.00s)\n"}
+{"Time":"2026-09-15T22:51:39.261127-07:00","Action":"pass","Package":"fixture/go-std","Test":"TestRegression","Elapsed":0}
+{"Time":"2026-09-15T22:51:39.261134-07:00","Action":"output","Package":"fixture/go-std","Output":"PASS\n"}
+{"Time":"2026-09-15T22:51:39.261402-07:00","Action":"output","Package":"fixture/go-std","Output":"ok  \tfixture/go-std\t0.530s\n"}
+{"Time":"2026-09-15T22:51:39.264092-07:00","Action":"pass","Package":"fixture/go-std","Elapsed":0.533}

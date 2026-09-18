@@ -1,0 +1,19 @@
+# VOUCH verify-level canary set (P1.7).
+#
+# One line per repository:  name|url|setup
+#   setup = none    → no dependency bootstrap (language toolchain only)
+#           pytest  → python3 -m venv .venv && pip install pytest + the project
+#           npm     → npm install --no-audit --no-fund
+#
+# Selection rule: small/medium repos, healthy CI, covering the built-in runners
+# (go test / pytest / vitest) so a regression in any parser shows up here.
+golang/example|https://github.com/golang/example|none
+go-chi/chi|https://github.com/go-chi/chi|none
+stretchr/testify|https://github.com/stretchr/testify|none
+pallets/itsdangerous|https://github.com/pallets/itsdangerous|pytest
+pytest-dev/iniconfig|https://github.com/pytest-dev/iniconfig|pytest
+psf/requests|https://github.com/psf/requests|pytest
+unjs/defu|https://github.com/unjs/defu|npm
+unjs/consola|https://github.com/unjs/consola|npm
+sindresorhus/execa|https://github.com/sindresorhus/execa|npm
+expressjs/express|https://github.com/expressjs/express|npm

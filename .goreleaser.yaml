@@ -1,0 +1,54 @@
+project_name: vouch
+builds:
+  - id: vouch
+    main: ./cmd/vouch
+    binary: vouch
+    env: [CGO_ENABLED=0]
+    goos: [linux, darwin]
+    goarch: [amd64, arm64]
+    ldflags:
+      - -s -w
+      - -X github.com/junqingyongyuanbusi/vouch/internal/version.Version={{.Version}}
+      - -X github.com/junqingyongyuanbusi/vouch/internal/version.Commit={{.Commit}}
+    flags:
+      - -trimpath
+archives:
+  - id: vouch
+    builds: [vouch]
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    format_overrides:
+      - goos: windows
+        format: zip
+checksum:
+  name_template: checksums.txt
+changelog:
+  sort: asc
+  filters:
+    exclude: ["^docs:", "^test:", "^chore:"]
+brews:
+  - name: vouch
+    repository:
+      owner: vouch
+      name: homebrew-tap
+    folder: Formula
+    homepage: https://vouch.dev
+    description: "Differential certifier for agent-produced code — husky for agent hooks, with evidence"
+    license: Apache-2.0
+    caveats: "Run `vouch init claude-code` to wire the Stop hook."
+nfpms:
+  - id: vouch
+    package_name: vouch
+    vendor: VOUCH
+    homepage: https://vouch.dev
+    maintainer: VOUCH maintainers <maintainers@vouch.dev>
+    description: "Differential certifier for agent-produced code — husky for agent hooks, with evidence"
+    license: Apache-2.0
+    formats: [deb, rpm]
+    bindir: /usr/bin
+    contents:
+      - src: LICENSE
+        dst: /usr/share/doc/vouch/LICENSE
+      - src: README.md
+        dst: /usr/share/doc/vouch/README.md
+announce:
+  skip: true
