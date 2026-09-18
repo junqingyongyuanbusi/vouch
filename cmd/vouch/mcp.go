@@ -9,7 +9,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/spf13/cobra"
 	"github.com/junqingyongyuanbusi/vouch/internal/bundle"
 	"github.com/junqingyongyuanbusi/vouch/internal/detector"
 	"github.com/junqingyongyuanbusi/vouch/internal/mcp"
@@ -17,6 +16,7 @@ import (
 	"github.com/junqingyongyuanbusi/vouch/internal/scheduler"
 	"github.com/junqingyongyuanbusi/vouch/internal/verdict"
 	"github.com/junqingyongyuanbusi/vouch/internal/version"
+	"github.com/spf13/cobra"
 )
 
 // mcpBackend adapts the kernel (scheduler + store + detector) to the MCP tool

@@ -17,13 +17,13 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/spf13/cobra"
 	"github.com/junqingyongyuanbusi/vouch/internal/bundle"
 	"github.com/junqingyongyuanbusi/vouch/internal/render"
 	"github.com/junqingyongyuanbusi/vouch/internal/scheduler"
 	"github.com/junqingyongyuanbusi/vouch/internal/verdict"
 	"github.com/junqingyongyuanbusi/vouch/internal/version"
 	"github.com/junqingyongyuanbusi/vouch/internal/worktree"
+	"github.com/spf13/cobra"
 )
 
 // verifyOptions holds the flags shared by the root command and `verify`.

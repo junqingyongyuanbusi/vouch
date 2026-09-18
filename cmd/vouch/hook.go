@@ -9,11 +9,11 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/spf13/cobra"
 	"github.com/junqingyongyuanbusi/vouch/internal/bundle"
 	"github.com/junqingyongyuanbusi/vouch/internal/gitexclude"
 	"github.com/junqingyongyuanbusi/vouch/internal/render"
 	"github.com/junqingyongyuanbusi/vouch/internal/scheduler"
+	"github.com/spf13/cobra"
 )
 
 // agentHookPayload is the common part of the Stop-hook input an agent sends on
