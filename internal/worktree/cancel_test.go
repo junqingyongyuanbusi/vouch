@@ -390,20 +390,24 @@ func TestReuseDepsContext_CancelKillsCpChild(t *testing.T) {
 		t.Skipf("cp not on PATH: %v", err)
 	}
 	shim := t.TempDir()
-	writeStallShim(t, shim, "cp", realCp, `[ "$1" = "-al" ]`, pidFile)
+	// Stall whichever copy runs first. The flags differ by platform (darwin
+	// clones with -c, GNU with --reflink) and reuse may try a second copy as a
+	// fallback, so matching on a specific flag would make this test silently
+	// stop covering the cancellation path.
+	writeStallShim(t, shim, "cp", realCp, `true`, pidFile)
 	prependPath(t, shim)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
 
 	start := time.Now()
-	reused, err := worktree.ReuseDepsContext(ctx, src, dst)
+	mode, err := worktree.ReuseDepsContext(ctx, src, dst)
 	elapsed := time.Since(start)
 	if err == nil {
-		t.Fatalf("stalled cp must surface cancellation, got reused=%v", reused)
+		t.Fatalf("stalled cp must surface cancellation, got mode=%s", mode)
 	}
-	if reused {
-		t.Fatal("canceled ReuseDepsContext must not report reuse")
+	if mode != worktree.DepsNone {
+		t.Fatalf("canceled ReuseDepsContext must not report reuse, got %s", mode)
 	}
 	if !errors.Is(err, context.DeadlineExceeded) {
 		t.Fatalf("want DeadlineExceeded, got %v", err)
@@ -458,8 +462,8 @@ func TestCreateContext_OrdinaryPathStillWorks(t *testing.T) {
 	if err != nil {
 		t.Fatalf("CreateContext: %v", err)
 	}
-	if !pair.DepsReused {
-		t.Fatalf("expected hardlink dependency reuse, gaps: %v", pair.DepsGaps)
+	if !pair.DepsReused() {
+		t.Fatalf("expected dependency reuse, gaps: %v", pair.DepsGaps)
 	}
 	for _, wt := range []string{pair.Base, pair.Candidate} {
 		if _, err := os.Stat(filepath.Join(wt, "node_modules", "pkg", "index.js")); err != nil {
@@ -467,9 +471,9 @@ func TestCreateContext_OrdinaryPathStillWorks(t *testing.T) {
 		}
 	}
 	// The base worktree is a clean HEAD checkout (no node_modules), so its copy
-	// must be a hardlink of the repo's. The candidate is checked out from the
-	// dirty snapshot, which already contains the untracked node_modules, so its
-	// copy comes from the checkout — cp -al correctly sees dst already present.
+	// comes from the repo. Under DepsCOW it must be a distinct inode — that is
+	// the whole point of the clone. Under the hardlink fallback the inode is
+	// shared, which is why that mode has to be declared as a gap.
 	src, err := os.Stat(depFile)
 	if err != nil {
 		t.Fatal(err)
@@ -478,8 +482,20 @@ func TestCreateContext_OrdinaryPathStillWorks(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !os.SameFile(baseDep, src) {
-		t.Fatalf("base dep %s is not a hardlink of the repo copy %s", pair.Base, depFile)
+	switch pair.DepsMode {
+	case worktree.DepsCOW:
+		if os.SameFile(baseDep, src) {
+			t.Fatalf("DepsCOW reported but %s shares an inode with %s", pair.Base, depFile)
+		}
+	case worktree.DepsHardlink:
+		if !os.SameFile(baseDep, src) {
+			t.Fatalf("DepsHardlink reported but %s is not linked to %s", pair.Base, depFile)
+		}
+		if len(pair.DepsGaps) == 0 {
+			t.Fatal("hardlink reuse shares inodes: it must be declared as a gap")
+		}
+	default:
+		t.Fatalf("unexpected deps mode %s", pair.DepsMode)
 	}
 
 	if pair.Snapshot == "" {
@@ -513,11 +529,11 @@ func TestWrappersMatchContextVersions(t *testing.T) {
 	}
 	defer func() { _ = pair.Cleanup() }()
 	// No node_modules in the repo: reuse is a documented no-op, not an error.
-	reused, err := worktree.ReuseDeps(dir, pair.Base)
+	mode, err := worktree.ReuseDeps(dir, pair.Base)
 	if err != nil {
 		t.Fatalf("ReuseDeps wrapper: %v", err)
 	}
-	if reused {
-		t.Fatal("ReuseDeps must report no reuse when the source has no node_modules")
+	if mode != worktree.DepsNone {
+		t.Fatalf("ReuseDeps must report DepsNone when the source has no node_modules, got %s", mode)
 	}
 }

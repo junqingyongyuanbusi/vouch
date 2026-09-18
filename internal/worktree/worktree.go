@@ -29,10 +29,15 @@ type Pair struct {
 	Snapshot        string   // candidate snapshot commit ("" when clean)
 	SnapshotRef     string   // refs/vouch/snapshots/<sha> pinning the snapshot ("" when clean)
 	CandidateCommit string   // commit actually used as candidate (snapshot or HEAD)
-	DepsReused      bool     // true when node_modules were hardlink-reused via cp -al
+	DepsMode        DepsMode // isolation level achieved when reusing node_modules
 	DepsGaps        []string // non-fatal dependency-reuse problems (surface into profile.gaps)
 	Cleanup         func() error
 }
+
+// DepsReused reports whether node_modules were reused at all, at any isolation
+// level. Callers that care about isolation must read DepsMode instead: only
+// DepsCOW keeps a probe's writes inside node_modules private to its own side.
+func (p *Pair) DepsReused() bool { return p.DepsMode != DepsNone }
 
 // Create builds base and candidate worktrees from baseRef.
 // repoRoot is the original repo path. Dirty changes (including untracked and
@@ -188,11 +193,12 @@ func CreateContext(ctx context.Context, repoRoot, baseRef string, candidateRefs 
 	if crossDevice {
 		depsGaps = append(depsGaps, "worktrees on a different filesystem than the repo: dependency hardlink reuse disabled")
 	}
-	// Reuse the repo's node_modules into both worktrees via hardlinks (cp -al).
-	// Best effort, but never silent: when the repo has node_modules and reuse did
-	// not happen, say so in DepsGaps (it means a full install will run).
-	ReusedBase, errBase := ReuseDepsContext(ctx, repoRoot, baseDir)
-	ReusedCandidate, errCandidate := ReuseDepsContext(ctx, repoRoot, candDir)
+	// Reuse the repo's node_modules into both worktrees, preferring a
+	// copy-on-write clone so each side's writes stay private. Best effort, but
+	// never silent: when the repo has node_modules and reuse did not happen, or
+	// happened only at hardlink strength, say so in DepsGaps.
+	modeBase, errBase := ReuseDepsContext(ctx, repoRoot, baseDir)
+	modeCandidate, errCandidate := ReuseDepsContext(ctx, repoRoot, candDir)
 	if errBase != nil {
 		depsGaps = append(depsGaps, "base node_modules reuse failed: "+errBase.Error())
 	}
@@ -204,9 +210,14 @@ func CreateContext(ctx context.Context, repoRoot, baseRef string, candidateRefs 
 	if err := ctx.Err(); err != nil {
 		return fail("canceled during dependency reuse", err)
 	}
-	if !crossDevice && (!ReusedBase || !ReusedCandidate) {
+	// The pair is only as isolated as its weaker side.
+	depsMode := weakestDepsMode(modeBase, modeCandidate)
+	if depsMode == DepsHardlink {
+		depsGaps = append(depsGaps, "dependencies reused via hardlinks (no copy-on-write support on this filesystem): in-place writes inside node_modules may cross between base and candidate")
+	}
+	if !crossDevice && depsMode == DepsNone {
 		if _, err := os.Stat(filepath.Join(repoRoot, "node_modules")); err == nil {
-			depsGaps = append(depsGaps, "node_modules present but not hardlink-reused (cross-device or partial failure): probes may need a full install")
+			depsGaps = append(depsGaps, "node_modules present but not reused (cross-device, symlinked without clone support, or partial failure): probes may need a full install")
 		}
 	}
 
@@ -222,7 +233,7 @@ func CreateContext(ctx context.Context, repoRoot, baseRef string, candidateRefs 
 		Snapshot:        snapshot,
 		SnapshotRef:     snapshotRef,
 		CandidateCommit: candidateRef,
-		DepsReused:      ReusedBase && ReusedCandidate,
+		DepsMode:        depsMode,
 		DepsGaps:        depsGaps,
 		Cleanup:         cleanup,
 	}, nil

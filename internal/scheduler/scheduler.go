@@ -266,9 +266,12 @@ func Run(ctx context.Context, cfg Config) (res Result, err error) {
 			return runBuiltin(ctx, probeName, pair.Candidate, "candidate", command, budget)
 		}
 		var baseRes, candRes probe.RunResult
-		if pair.DepsReused {
-			// Hardlinked node_modules: run the sides one after another so the two
-			// runners never write the same cache files concurrently.
+		if pair.DepsReused() {
+			// Both sides came from one node_modules copy. Under DepsHardlink they
+			// still share inodes, so concurrent runners could write the same cache
+			// files; run them one after another. DepsCOW could safely go parallel,
+			// but that is a speed change, not an isolation one — keep the shapes
+			// identical until it is measured on its own.
 			baseRes = baseSide()
 			if budgetExhausted(baseRes) {
 				// Base could not finish: a candidate comparison would be
