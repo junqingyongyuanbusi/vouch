@@ -81,6 +81,12 @@ func weakestDepsMode(a, b DepsMode) DepsMode {
 // trusting. An error means an unexpected failure the caller should surface as a
 // gap; it is never used for the ordinary "fall back to a full install" path.
 //
+// Isolating the two sides makes a verify run on a caching test runner roughly
+// twice as slow, because both sides now actually run. Sharing the cache back
+// would restore the old speed and re-break the evidence: the candidate would
+// read the base's results and a real regression could pass. See
+// docs/agent-loop.md, "Why isolation costs time".
+//
 // ReuseDeps is ReuseDepsContext with a background context.
 func ReuseDeps(srcWorktree, dstWorktree string) (DepsMode, error) {
 	return ReuseDepsContext(context.Background(), srcWorktree, dstWorktree)

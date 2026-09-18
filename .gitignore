@@ -47,6 +47,7 @@ npm/platforms/*/bin/vouch.exe
 .vouch/tmp-*/
 # Fixture products (never commit evidence, keep fixtures minimal)
 testdata/**/__pycache__/
+__pycache__/
 testdata/**/.pytest_cache/
 testdata/**/package-lock.json
 testdata/**/node_modules/

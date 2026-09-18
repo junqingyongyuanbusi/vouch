@@ -74,6 +74,23 @@ directories) is not deadline-bounded and may run slightly past the deadline;
 worktree cleanup failures are surfaced as warnings instead of being silent. No
 background goroutine is used to return while setup keeps writing to disk.
 
+### Why isolation costs time, and why that must not be "optimized" away
+
+`base` and `candidate` each run the probes for real. If the two sides shared a
+test runner's cache — vitest's `results.json`, jest's cache, tsc's
+`.tsbuildinfo`, `.pytest_cache` — the candidate would read the base's results
+instead of producing its own. That is one run compared against itself: the
+differential atomicity this tool is built on collapses, and an injected
+regression can come back `VERIFIED`.
+
+So on projects with a caching runner, dependency isolation roughly doubles the
+cold-start wall time. That is what two independent runs cost; it is not a
+performance regression to be fixed by sharing state again. Legitimate ways to
+buy the time back are parallelising the two sides (which first requires
+enumerating every shared write surface outside the worktrees — `GOMODCACHE`,
+`~/.npm`, `~/.cache/pip`, `~/.cargo`) or giving each side its own warm cache
+copy. Never a shared one.
+
 ## 2. Completion hook (`vouch hook <agent>`)
 
 Exit codes carry the verdict, and each agent interprets them differently, so the

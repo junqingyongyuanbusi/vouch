@@ -18,7 +18,9 @@ jobs:
           go-version: "1.24"
           cache: true
       - name: gofmt check
-        run: test -z "$(gofmt -l . | grep -v '^testdata/')" || (gofmt -l .; exit 1)
+        # Go through the Makefile so CI and a developer's machine run the same
+        # check with the same gofmt (the target resolves it from GOROOT).
+        run: make fmt-check
       - name: vet
         run: go vet ./...
       - name: python deps (pytest)
@@ -77,6 +79,39 @@ jobs:
           cache: true
       - name: canary (zero-config detection ≥7/8)
         run: go test -tags canary ./internal/detector -run TestCanary -v -count=1 -timeout 600s
+
+  worktree-macos:
+    # Dependency isolation takes two different paths and ubuntu only exercises
+    # one: ext4 has no reflink, so --reflink=always fails there and every run
+    # falls back to hardlinks. APFS clones, so DepsCOW -- the path that gives
+    # full isolation -- is only ever executed here. Without this job the mode
+    # most users get is covered by nobody.
+    runs-on: macos-latest
+    needs: lint-test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.24"
+          cache: true
+      - name: fixture deps (ts-vitest)
+        run: npm install --prefix testdata/fixtures/ts-vitest --no-audit --no-fund
+      - name: worktree + scheduler isolation tests (COW path)
+        run: go test ./internal/worktree ./internal/scheduler -count=1 -timeout 15m
+      - name: confirm this runner actually took the clone path
+        # A silent downgrade to hardlinks would leave this job green while
+        # covering nothing new, so assert the filesystem really clones rather
+        # than assuming macOS implies APFS.
+        run: |
+          src=$(mktemp -d); dst=$(mktemp -d)/clone
+          echo original > "$src/f"
+          cp -c -R "$src" "$dst"
+          printf 'mutated' | dd of="$dst/f" conv=notrunc status=none
+          if [ "$(cat "$src/f")" != "original" ]; then
+            echo "FAIL: cp -c shared the inode; this runner is not exercising DepsCOW" >&2
+            exit 1
+          fi
+          echo "confirmed: cp -c produces independent inodes (DepsCOW path is live)"
 
   npm-wrapper:
     # Publish-path validation: pack the wrapper + platform package and run the

@@ -100,16 +100,45 @@ vouch probe scaffold <name>          # [P3] 探针脚手架
 * 检测率金丝雀：`make canary` → `internal/detector` 在 3 fixture + 5 真实仓上 ≥7/8
 * 验证级金丝雀：`make canary-verify` → 真实仓跑 `vouch verify --ci`，输出
   三态成功率 / UNVERIFIED 率 / 增量 P50（CI 每晚 `canary.yml`）
+* 回归注入金丝雀：`make canary-regress` → 向每个仓注入一个**已知正确结论**的改动
+  （注入必失败的测试 / 只加注释 / 删除一个通过的测试），量出误放行率。
+  干净仓库反复 VERIFIED 不构成证据，这条才是。本地快速自检：
+  `make canary-regress-fixtures`（3 fixture，无网络，秒级）
 
-最近一次本机结果（10 仓：Go×3 / Python×3 / JS×4，依赖按前置条件预装）：
+最近一次本机结果（2026-09-18，10 仓：Go×3 / Python×3 / JS×4，依赖按前置条件预装）：
 
 ```
 three-state ok:   9/10      (target >= 7/10)
 UNVERIFIED rate:  1/10      (target <= 20%)
-incremental P50:  ~3.4s     (target <= 60s)
+incremental P50:  2.3s      (target <= 60s)
+incremental max:  128.2s    ← sindresorhus/execa，见下
 失败样本：sindresorhus/execa（测试入口是 npm run lint && unit && type，AVA 不在内置解析器内
-→ 120s 探针预算耗尽 → UNVERIFIED，并明确记录 unverified_claims）
+→ 探针预算耗尽 → UNVERIFIED，并明确记录 unverified_claims）
 ```
+
+回归注入（2026-09-18，3 fixture）：
+
+```
+false-clear (regression -> VERIFIED): 0/3   ← 必须为 0
+false-block (harmless  -> BROKEN):    0/3
+coverage drop visible (removed):      2/2
+skipped: 1  (ts-vitest 的 removed 臂：fixture 只有一个测试，删光会变成编译错误)
+```
+
+真实仓集的数字**尚未取得可用基线**：10 仓中多数在本机装不出可运行的测试环境
+（`pnpm` 工作区、pytest 插件 extras、detector 在 `pytest-dev/iniconfig` 上把 CI 的
+发布检查步骤误认成测试入口），baseline 臂本身即 UNVERIFIED，误放行率没有有效分母。
+待夜间 CI（`canary.yml` 的 `regress-canary`，`continue-on-error`）积累后替换。
+
+> 这一轮的注入实验已经产出了它该产出的东西：`differ` 在「两侧都没跑起来」时
+> 把空 delta 判为 pass，一个注入的失败测试因此返回 VERIFIED（`unjs/defu`、
+> `go-chi/chi`、`psf/requests`、`pytest-dev/iniconfig` 四例）。修复后同样的
+> 输入返回 UNVERIFIED。干净仓库上反复 VERIFIED 永远发现不了这个。
+
+> 依赖隔离后，使用缓存型测试运行器的项目冷启动耗时约为原来的 2 倍
+> （本机 TS 场景 17.0s → 32.2s）。这不是性能回归：此前的"快"来自
+> candidate 复用 base 的 vitest `results.json`，即一次运行和它自己比。
+> 详见 `docs/agent-loop.md` 的 "Why isolation costs time"。
 
 ## 开发
 
