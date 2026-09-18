@@ -2,7 +2,10 @@
 
 BIN := bin/vouch
 GO := go
-GOFMT := gofmt
+# Pin gofmt to the toolchain in use. A bare `gofmt` resolves through PATH, which
+# can be a different Go version than `go build` uses — and the two disagree on
+# formatting, so CI and a developer's machine would reach opposite verdicts.
+GOFMT := $(shell $(GO) env GOROOT)/bin/gofmt
 
 build:
 	mkdir -p bin
@@ -24,7 +27,8 @@ fmt:
 	$(GOFMT) -l -w .
 
 fmt-check:
-	@test -z "$$($(GOFMT) -l . | grep -v '^testdata/')" || (echo "gofmt diff found"; $(GOFMT) -l .; exit 1)
+	@bad="$$($(GOFMT) -l . | grep -v '^testdata/')"; \
+	 if [ -n "$$bad" ]; then echo "gofmt diff found:"; echo "$$bad"; exit 1; fi
 
 lint:
 	@which golangci-lint >/dev/null 2>&1 || (echo "install golangci-lint v2: https://golangci-lint.run/welcome/install/" && exit 1)
