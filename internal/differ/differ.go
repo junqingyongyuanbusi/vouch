@@ -146,6 +146,15 @@ func EvidenceWithArbitration(probeName, reproduce, envFingerprint string, starte
 		if base.Verdict == probe.VerdictPass && cand.Verdict == probe.VerdictFail {
 			ev.Delta.Regressions = []string{probeName}
 		}
+		if base.Verdict == probe.VerdictFail && cand.Verdict == probe.VerdictFail {
+			// Both sides failed and this shape carries nothing to attribute the
+			// failure to, so the delta is empty for the same reason on both
+			// sides: nothing was measured. Reading that as "no regression"
+			// clears a change no one looked at — the failure mode the
+			// regression canary caught on a repo whose test runner could not
+			// start, where an injected failing test still came back VERIFIED.
+			unattributable = true
+		}
 	}
 
 	if len(arb.Unresolved) > 0 {

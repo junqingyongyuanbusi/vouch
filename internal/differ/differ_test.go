@@ -96,6 +96,24 @@ func TestEvidence_UnknownProbeShapeNeverDefaultsToPass(t *testing.T) {
 	if ev.Verdict != bundle.EvidenceFail || len(ev.Delta.Regressions) == 0 {
 		t.Fatalf("unknown-shape regression must not default to pass: %+v", ev)
 	}
+	// Both sides failing with nothing to attribute it to: the probe never
+	// produced comparable output (a missing package manager, an install that
+	// never ran), so the two sides are equally blind. "No difference between
+	// two blind runs" is not evidence of no regression -- found by the
+	// regression-injection canary, where `unjs/defu` came back VERIFIED with an
+	// injected failing test because neither side could start its runner.
+	evBlind, err := differ.Evidence("thirdparty-lint", "vouch rerun x123456 --probe thirdparty-lint", env, time.Now().UTC(),
+		probe.RunResult{Verdict: probe.VerdictFail, Data: map[string]interface{}{"summary": "command failed"}},
+		probe.RunResult{Verdict: probe.VerdictFail, Data: map[string]interface{}{"summary": "command failed"}})
+	if err != nil {
+		t.Fatalf("evidence: %v", err)
+	}
+	if evBlind.Verdict == bundle.EvidencePass {
+		t.Fatalf("both sides failed with no attribution; pass would clear an unmeasured change: %+v", evBlind)
+	}
+	if evBlind.Verdict != bundle.EvidenceInconclusive {
+		t.Fatalf("want inconclusive for a double-blind run, got %s: %+v", evBlind.Verdict, evBlind)
+	}
 	// Both sides inconclusive → inconclusive.
 	ev2, _ := differ.Evidence("thirdparty-lint", "vouch rerun x123456 --probe thirdparty-lint", env, time.Now().UTC(),
 		probe.RunResult{Verdict: probe.VerdictInconclusive},
