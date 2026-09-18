@@ -39,3 +39,53 @@ jobs:
           path: |
             canary-summary.txt
             ${{ runner.temp }}/vouch-canary/results.tsv
+
+  regress-canary:
+    # Injects a change whose correct verdict is known and measures whether
+    # vouch reaches it. verify-canary only shows that a verdict comes out;
+    # this is what shows the verdict is right. The number that matters is
+    # false-clear (a regression reported as VERIFIED) -- the one failure mode
+    # a user cannot notice on their own.
+    #
+    # continue-on-error while the baseline is being established: a real repo
+    # changing its own tests upstream would otherwise block the branch on
+    # something that is not a vouch regression. Flip it off once the rates
+    # have been stable for a few weeks.
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.24"
+          cache: true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: python prerequisites
+        run: python3 -m pip install --quiet pytest
+      - name: build vouch
+        run: go build -o /tmp/vouch ./cmd/vouch
+      - name: injector self-check (local fixtures, no network)
+        # Runs first: if the injector itself is broken, the real-repo numbers
+        # below are meaningless and this says so in seconds instead of an hour.
+        env:
+          VOUCH_BIN: /tmp/vouch
+          CANARY_CACHE: ${{ runner.temp }}/vouch-canary-regress-fixtures
+        run: |
+          npm install --prefix testdata/fixtures/ts-vitest --no-audit --no-fund
+          bash scripts/canary/regress.sh --fixtures | tee regress-fixtures.txt
+      - name: regression canary (real repos)
+        env:
+          VOUCH_BIN: /tmp/vouch
+          CANARY_CACHE: ${{ runner.temp }}/vouch-canary-regress
+        run: bash scripts/canary/regress.sh | tee regress-summary.txt
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: regress-summary
+          path: |
+            regress-fixtures.txt
+            regress-summary.txt
+            ${{ runner.temp }}/vouch-canary-regress/regress.tsv

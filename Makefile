@@ -1,4 +1,4 @@
-.PHONY: build test lint vet tidy canary clean install fmt fmt-check
+.PHONY: build test lint vet tidy canary canary-verify canary-regress canary-regress-fixtures clean install fmt fmt-check
 
 BIN := bin/vouch
 GO := go
@@ -58,6 +58,16 @@ npm-roundtrip:
 # Verify-level canary: real repos, real `vouch verify` (needs network).
 canary-verify:
 	bash scripts/canary/verify.sh
+
+# Regression-injection canary: inject a change whose correct verdict is known
+# and measure whether vouch reaches it. A clean repo returning VERIFIED proves
+# nothing on its own -- this is what produces the false-clear rate.
+canary-regress:
+	bash scripts/canary/regress.sh
+
+# Same arms against the local fixtures: no network, deterministic, seconds.
+canary-regress-fixtures:
+	bash scripts/canary/regress.sh --fixtures
 
 # Deterministic agent-loop walkthrough (docs/agent-loop.md evidence).
 demo-agent-loop:
