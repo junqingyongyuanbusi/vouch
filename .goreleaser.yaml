@@ -32,7 +32,8 @@ brews:
     repository:
       owner: vouch
       name: homebrew-tap
-    folder: Formula
+    # v2 renamed the tap subdirectory field from `folder` to `directory`.
+    directory: Formula
     homepage: https://vouch.dev
     description: "Differential certifier for agent-produced code — husky for agent hooks, with evidence"
     license: Apache-2.0

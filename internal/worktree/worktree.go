@@ -262,8 +262,15 @@ func SnapshotContext(ctx context.Context, repoRoot string) (string, error) {
 	_ = f.Close()
 	_ = os.Remove(idx)
 	// Deferred: cleanup runs on every exit path, including cancellation, so the
-	// temp index never survives a canceled run.
-	defer func() { _ = os.Remove(idx) }()
+	// temp index never survives a canceled run. The `.lock` sidecar matters
+	// just as much: git holds <index>.lock while writing and a SIGKILLed git
+	// has no chance to remove it — without this, every canceled snapshot that
+	// dies mid-`add` leaks a lock file (observed as a flaky
+	// TestSnapshotContext_CancelKillsGitAndRemovesTempIndex on CI).
+	defer func() {
+		_ = os.Remove(idx)
+		_ = os.Remove(idx + ".lock")
+	}()
 
 	// Deterministic identity for the temporary snapshot commit (overrides user config
 	// only for these git invocations; the commit is never stored in a ref).
