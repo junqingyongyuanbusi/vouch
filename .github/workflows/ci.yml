@@ -28,6 +28,15 @@ jobs:
       - name: fixture deps (ts-vitest)
         # The TS end-to-end probe test runs a real vitest; without this it skips.
         run: npm install --prefix testdata/fixtures/ts-vitest --no-audit --no-fund
+      - name: allow unprivileged user namespaces (Linux sandbox)
+        # Ubuntu 24.04 ships an AppArmor profile that blocks unprivileged
+        # userns, which kills `unshare -rn` ("write failed /proc/self/uid_map").
+        # The sandbox code falls back to running unisolated when its launcher
+        # fails, but CI must exercise the real sandboxed path — the fallback
+        # would silently turn the egress-denial test into a skip.
+        run: |
+          sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+          unshare -rn true   # fail fast here rather than as eight red tests
       - name: test
         run: go test ./... -count=1
       - name: golangci-lint
@@ -129,4 +138,3 @@ jobs:
           node-version: "20"
       - name: npm roundtrip (pack + install + run)
         run: bash scripts/npm/roundtrip.sh
-

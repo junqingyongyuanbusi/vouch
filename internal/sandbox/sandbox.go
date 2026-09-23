@@ -162,18 +162,27 @@ func classify(ctx context.Context, cmd *exec.Cmd, err error) (bool, int, error) 
 }
 
 func looksLikeLauncherFailure(stderr string) bool {
-	// Only launcher-prefixed markers: a generic "Operation not permitted"
-	// can be the wrapped command itself being denied network access (that is
-	// the sandbox working), and retrying it unisolated would both re-run the
-	// command and silently open the network.
-	for _, marker := range []string{
-		"unshare failed", "sandbox-exec:", "sandbox_init",
-	} {
-		if strings.Contains(stderr, marker) {
-			return true
-		}
+	// The launcher's own failure is always its first stderr line, prefixed
+	// with the executable name (`unshare: ...`, `sandbox-exec: ...`). Matching
+	// that prefix — instead of enumerating message variants — survives
+	// wording changes across util-linux versions: runners that restrict
+	// unprivileged user namespaces turned "unshare failed" into
+	// "write failed /proc/self/uid_map", which the old marker list missed and
+	// misreported as a failing command (eight red tests on ubuntu-24.04 CI).
+	//
+	// A generic "Operation not permitted" mid-stream is the wrapped command
+	// itself being denied network access (that is the sandbox working);
+	// retrying it unisolated would re-run the command and silently open the
+	// network, so it must not match. The launcher prefix is only trusted on
+	// the first line: when the launcher dies, it is the only writer of stderr
+	// (the wrapped command never started).
+	if first := firstLine(stderr); strings.HasPrefix(first, "unshare:") ||
+		strings.HasPrefix(first, "sandbox-exec:") {
+		return true
 	}
-	return false
+	// Some sandbox-exec failures surface the library marker without the
+	// executable prefix.
+	return strings.Contains(stderr, "sandbox_init")
 }
 
 func firstLine(s string) string {

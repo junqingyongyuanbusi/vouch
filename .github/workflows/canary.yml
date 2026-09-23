@@ -25,6 +25,12 @@ jobs:
           node-version: "20"
       - name: python prerequisites
         run: python3 -m pip install --quiet pytest
+      - name: allow unprivileged user namespaces (Linux sandbox)
+        # Ubuntu 24.04 blocks unprivileged userns via AppArmor; without this
+        # the canary measures vouch's fallback path instead of its sandbox.
+        run: |
+          sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+          unshare -rn true
       - name: build vouch
         run: go build -o /tmp/vouch ./cmd/vouch
       - name: run verify canary
@@ -65,6 +71,12 @@ jobs:
           node-version: "20"
       - name: python prerequisites
         run: python3 -m pip install --quiet pytest
+      - name: allow unprivileged user namespaces (Linux sandbox)
+        # Ubuntu 24.04 blocks unprivileged userns via AppArmor; without this
+        # the canary measures vouch's fallback path instead of its sandbox.
+        run: |
+          sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+          unshare -rn true
       - name: build vouch
         run: go build -o /tmp/vouch ./cmd/vouch
       - name: injector self-check (local fixtures, no network)
