@@ -42,7 +42,10 @@ jobs:
       - name: golangci-lint
         uses: golangci/golangci-lint-action@v6
         with:
-          version: latest
+          # The repo ships a v2 config (version: "2" + formatters section);
+          # `latest` resolves to the v1 line (1.64.8), whose config verify
+          # rejects those keys. Pin the major so CI matches the local setup.
+          version: v2
 
   goreleaser-dry:
     runs-on: ubuntu-latest
