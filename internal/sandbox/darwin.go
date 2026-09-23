@@ -9,9 +9,10 @@ import (
 
 // buildCommand applies macOS sandbox-exec when available.
 //
-// Verified profile syntax (sbpl on macOS 14/15): `(allow network* (local))` is
-// rejected by the parser; the working loopback form is
-// `(allow network* (remote ip "localhost:*"))`.
+// Verified profile syntax (sbpl on macOS 14/15): unfiltered `(allow network*
+// (local))` is rejected by the parser; loopback needs the ip-filtered forms
+// `(allow network* (remote ip "localhost:*"))` (connect) and
+// `(allow network* (local ip "localhost:*"))` (bind).
 //
 // sandbox-exec is deprecated by Apple but still present; when missing we run
 // direct and report Sandboxed=false (best-effort, documented).
@@ -34,5 +35,11 @@ func networkRules(policy Policy) string {
 	if policy.NeedsNetwork {
 		return "(allow network*)\n"
 	}
-	return "(deny network*)\n(allow network* (remote ip \"localhost:*\"))\n"
+	// Both directions of localhost traffic are needed by real probes: a test
+	// runner binds a localhost server (local) and connects to it (remote).
+	// The unfiltered `(local)` form is rejected by the parser; the ip-filtered
+	// form parses on macOS 14/15. Remote egress stays under (deny network*).
+	return "(deny network*)\n" +
+		"(allow network* (remote ip \"localhost:*\"))\n" +
+		"(allow network* (local ip \"localhost:*\"))\n"
 }

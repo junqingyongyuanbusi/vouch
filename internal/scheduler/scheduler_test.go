@@ -38,7 +38,7 @@ func scenarioRepo(t *testing.T, files map[string]string) string {
 }
 
 // scenarioRepoWithSetup is scenarioRepo plus a hook that runs before the initial
-// commit (e.g. linking node_modules so both worktrees can run the runner).
+// commit (e.g. staging node_modules so both worktrees can run the runner).
 func scenarioRepoWithSetup(t *testing.T, files map[string]string, setup func(dir string)) string {
 	t.Helper()
 	dir := t.TempDir()
@@ -61,6 +61,31 @@ func scenarioRepoWithSetup(t *testing.T, files map[string]string, setup func(dir
 	gitRun(t, dir, "add", "-A")
 	gitRun(t, dir, "commit", "-qm", "base")
 	return dir
+}
+
+// stageNodeModules puts a REAL node_modules into the scenario repo and keeps
+// it out of git. The earlier symlink approach was dereferenced by the deps
+// isolator and, on reflink-less filesystems (ext4), its reuse was declined
+// outright — the worktrees ended up without a runner and every TypeScript
+// scenario reported "runner not available" on Linux. A real directory takes
+// the normal reuse path on every platform (COW on APFS, hardlinks on ext4).
+func stageNodeModules(t *testing.T, fixture, dir string) {
+	t.Helper()
+	gitignore := filepath.Join(dir, ".gitignore")
+	if err := os.WriteFile(gitignore, []byte("node_modules\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	// cp -R (not os.CopyFS): the fixture tree is full of relative symlinks
+	// (node_modules/.bin) and os.CopyFS cannot recreate symlinks on the
+	// go1.24 toolchain (ReadLinkFS support landed in 1.25 — it fails with
+	// "CopyFS .bin/<tool>: invalid argument"). cp preserves symlinks by
+	// default on both BSD and GNU.
+	if out, err := exec.Command("cp", "-R", "-p",
+		filepath.Join(fixture, "node_modules"),
+		filepath.Join(dir, "node_modules"),
+	).CombinedOutput(); err != nil {
+		t.Fatalf("copy node_modules: %v\n%s", err, out)
+	}
 }
 
 func gitRun(t *testing.T, dir string, args ...string) {
@@ -226,9 +251,7 @@ func TestScenarioTypeScript_RegressionAndClean(t *testing.T) {
 		"src/add.test.ts": read("src/add.test.ts"),
 	}
 	repo := scenarioRepoWithSetup(t, files, func(dir string) {
-		if err := os.Symlink(filepath.Join(fixture, "node_modules"), filepath.Join(dir, "node_modules")); err != nil {
-			t.Fatal(err)
-		}
+		stageNodeModules(t, fixture, dir)
 	})
 	clean := run(t, repo, scheduler.Config{BaseRef: "HEAD", DisableCache: true})
 	if clean.Verdict != bundle.Verified {
@@ -461,9 +484,7 @@ func TestScenarioTypeScript_PureAdditionAndFlaky(t *testing.T) {
 		"src/add.ts":      read("src/add.ts"),
 		"src/add.test.ts": read("src/add.test.ts"),
 	}, func(dir string) {
-		if err := os.Symlink(filepath.Join(fixture, "node_modules"), filepath.Join(dir, "node_modules")); err != nil {
-			t.Fatal(err)
-		}
+		stageNodeModules(t, fixture, dir)
 	})
 	// pure addition
 	write(t, repo, "src/mul.ts", "export function mul(a: number, b: number) {\n  return a * b\n}\n")
@@ -686,9 +707,7 @@ describe("flaky", () => {
 })
 `,
 	}, func(dir string) {
-		if err := os.Symlink(filepath.Join(fixture, "node_modules"), filepath.Join(dir, "node_modules")); err != nil {
-			t.Fatal(err)
-		}
+		stageNodeModules(t, fixture, dir)
 	})
 	flakyRes := run(t, repo, scheduler.Config{BaseRef: "HEAD", DisableCache: true})
 	if flakyRes.Verdict != bundle.Unverified {
@@ -711,9 +730,7 @@ describe("flaky", () => {
 describe("known bad", () => { it("always fails", () => expect(1).toBe(2)) })
 `,
 	}, func(dir string) {
-		if err := os.Symlink(filepath.Join(fixture, "node_modules"), filepath.Join(dir, "node_modules")); err != nil {
-			t.Fatal(err)
-		}
+		stageNodeModules(t, fixture, dir)
 	})
 	if err := os.Remove(filepath.Join(repo2, "src", "known_bad.test.ts")); err != nil {
 		t.Fatal(err)
@@ -1074,9 +1091,7 @@ func TestScenarioTypeScript_NarrowedEmptyFallsBackToFullSuite(t *testing.T) {
 		"src/add.ts":      read("src/add.ts"),
 		"src/add.test.ts": read("src/add.test.ts"),
 	}, func(dir string) {
-		if err := os.Symlink(filepath.Join(fixture, "node_modules"), filepath.Join(dir, "node_modules")); err != nil {
-			t.Fatal(err)
-		}
+		stageNodeModules(t, fixture, dir)
 	})
 	// a module no test imports: `vitest related` matches nothing and exits 1
 	write(t, repo, "src/unused.ts", "export function unused() {\n  return 1\n}\n")
@@ -1177,9 +1192,7 @@ func TestScenarioTypeScript_NoTestsCollectedIsNotVerified(t *testing.T) {
 		"src/add.ts":         read("src/add.ts"),
 		"vitest.config.json": `{"test":{"include":["src/__none__/*.test.ts"]}}`,
 	}, func(dir string) {
-		if err := os.Symlink(filepath.Join(fixture, "node_modules"), filepath.Join(dir, "node_modules")); err != nil {
-			t.Fatal(err)
-		}
+		stageNodeModules(t, fixture, dir)
 	})
 	res := run(t, repo, scheduler.Config{BaseRef: "HEAD", DisableCache: true})
 	if res.Verdict == bundle.Verified {

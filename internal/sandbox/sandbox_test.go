@@ -2,7 +2,6 @@ package sandbox_test
 
 import (
 	"context"
-	"net"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -54,31 +53,24 @@ func TestSandbox_NonZeroExitIsResult(t *testing.T) {
 }
 
 // TestSandbox_LoopbackAllowed is the P1.2 acceptance test: localhost must be
-// reachable under the default (network-denied) policy.
+// usable under the default (network-denied) policy — server and client both
+// inside the sandboxed run, which is how probes actually use it (a test
+// runner that starts a localhost server talks to itself within one probe).
+//
+// A listener on the HOST side is deliberately not covered: a Linux network
+// namespace has its own loopback, so host listeners are unreachable from
+// inside by design — that is egress isolation working, not a regression. The
+// earlier host-listener version of this test only ever passed through the
+// unisolated fallback, which hid a real semantic break once the sandbox
+// started working on CI.
 func TestSandbox_LoopbackAllowed(t *testing.T) {
 	bin := buildDialer(t)
-	ln, err := net.Listen("tcp", "127.0.0.1:0")
-	if err != nil {
-		t.Fatalf("listen: %v", err)
-	}
-	defer ln.Close()
-	go func() {
-		for {
-			conn, err := ln.Accept()
-			if err != nil {
-				return
-			}
-			_ = conn.Close()
-		}
-	}()
-
-	addr := ln.Addr().String()
-	res, err := sandbox.Run(context.Background(), t.TempDir(), bin+" "+addr, sandbox.Policy{Timeout: 15 * time.Second})
+	res, err := sandbox.Run(context.Background(), t.TempDir(), bin+" selfloop", sandbox.Policy{Timeout: 15 * time.Second})
 	if err != nil {
 		t.Fatalf("Run: %v", err)
 	}
 	if res.ExitCode != 0 {
-		t.Fatalf("loopback dial must succeed under default policy: exit=%d stderr=%s reason=%s",
+		t.Fatalf("loopback must be usable under default policy: exit=%d stderr=%s reason=%s",
 			res.ExitCode, res.Stderr, res.Reason)
 	}
 }
