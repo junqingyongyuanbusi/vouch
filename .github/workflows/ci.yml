@@ -44,8 +44,10 @@ jobs:
         with:
           # The repo ships a v2 config (version: "2" + formatters section);
           # `latest` resolves to the v1 line (1.64.8), whose config verify
-          # rejects those keys. Pin the major so CI matches the local setup.
-          version: v2
+          # rejects those keys. Pin an explicit v2 release (the action rejects
+          # the shorthand `v2` — it wants v1.2.3-format input), matching the
+          # toolchain installed locally per the README.
+          version: v2.13.2
 
   goreleaser-dry:
     runs-on: ubuntu-latest
