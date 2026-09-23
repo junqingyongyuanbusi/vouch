@@ -107,7 +107,7 @@ func TestCLI_McpSpeaksMCPOverStdio(t *testing.T) {
 	if err != nil {
 		t.Fatalf("connect to `vouch mcp`: %v", err)
 	}
-	defer session.Close()
+	defer func() { _ = session.Close() }()
 
 	tools, err := session.ListTools(ctx, nil)
 	if err != nil {

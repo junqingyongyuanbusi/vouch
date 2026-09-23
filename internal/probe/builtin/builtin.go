@@ -57,13 +57,6 @@ func runShell(ctx context.Context, in Input) (out string, exit int, timedOut boo
 	return out, res.ExitCode, res.TimedOut, nil
 }
 
-func dataOf(m map[string]interface{}) map[string]interface{} {
-	if m == nil {
-		return map[string]interface{}{}
-	}
-	return m
-}
-
 // missingRunner reports whether the command never started because the runner
 // is absent (exit 126/127 or a "command not found" message). That is "cannot
 // measure", not a failing test/build: reading it as a failure would both hide

@@ -68,7 +68,7 @@ func caseCommand(testCmd string, ids []string) (string, bool) {
 		// Derive from the recorded command so runner flags survive the rerun:
 		// dropping -race/-count/... would let a race-only failure look flaky.
 		base := strings.TrimSpace(testCmd)
-		if strings.Contains(base, "-json") == false {
+		if !strings.Contains(base, "-json") {
 			base += " -json"
 		}
 		if i := strings.Index(base, "./..."); i >= 0 {

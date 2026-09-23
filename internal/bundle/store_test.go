@@ -91,7 +91,7 @@ func TestBundleIDFor_Stable(t *testing.T) {
 			t.Fatalf("id length out of range: %q", id)
 		}
 		for _, c := range id {
-			if !((c >= '0' && c <= '9') || (c >= 'a' && c <= 'f')) {
+			if (c < '0' || c > '9') && (c < 'a' || c > 'f') {
 				t.Fatalf("id not hex: %q", id)
 			}
 		}

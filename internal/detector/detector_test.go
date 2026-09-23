@@ -6,7 +6,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/junqingyongyuanbusi/vouch/internal/bundle"
 	"github.com/junqingyongyuanbusi/vouch/internal/detector"
 )
 
@@ -48,7 +47,8 @@ func TestDetect_Fixtures(t *testing.T) {
 				if len(parts) != 2 || parts[1] == "0" || parts[1] == "" {
 					t.Fatalf("source line invalid: %q", cmd.Source)
 				}
-			} else if !(strings.Contains(cmd.Source, "#scripts.") || strings.Contains(cmd.Source, "#default") || strings.Contains(cmd.Source, "#tool.")) {
+			} else if !strings.Contains(cmd.Source, "#scripts.") &&
+				!strings.Contains(cmd.Source, "#default") && !strings.Contains(cmd.Source, "#tool.") {
 				t.Fatalf("source must contain #L or #scripts/#default/#tool, got %q", cmd.Source)
 			}
 		})
@@ -150,9 +150,4 @@ func contains(ss []string, s string) bool {
 		}
 	}
 	return false
-}
-
-func hasUsableTest(cmds map[string]bundle.Command) bool {
-	c, ok := cmds["test"]
-	return ok && strings.TrimSpace(c.Cmd) != ""
 }

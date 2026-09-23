@@ -78,15 +78,15 @@ func readPid(t *testing.T, pidFile string) int {
 
 // waitProcessGone asserts the stalled grandchild was actually killed (not just
 // detached). ESRCH means the pid no longer exists.
-func waitProcessGone(t *testing.T, pid int, timeout time.Duration) {
+func waitProcessGone(t *testing.T, pid int) {
 	t.Helper()
-	deadline := time.Now().Add(timeout)
+	deadline := time.Now().Add(10 * time.Second)
 	for {
 		if err := syscall.Kill(pid, 0); err == syscall.ESRCH {
 			return
 		}
 		if time.Now().After(deadline) {
-			t.Fatalf("stalled child pid %d still alive after %v (process group not reaped)", pid, timeout)
+			t.Fatalf("stalled child pid %d still alive after %v (process group not reaped)", pid, 10*time.Second)
 		}
 		time.Sleep(50 * time.Millisecond)
 	}
@@ -172,7 +172,7 @@ func TestSnapshotContext_CancelKillsGitAndRemovesTempIndex(t *testing.T) {
 	if elapsed > 15*time.Second {
 		t.Fatalf("cancellation took %v (child/pipe wait not bounded)", elapsed)
 	}
-	waitProcessGone(t, readPid(t, pidFile), 10*time.Second)
+	waitProcessGone(t, readPid(t, pidFile))
 	if after := tempIndexCount(t); after != before {
 		t.Fatalf("temp index not cleaned up after cancellation: %d -> %d", before, after)
 	}
@@ -216,7 +216,7 @@ func TestCreateContext_CancelDuringWorktreeAddKillsChildAndRollsBack(t *testing.
 	if elapsed > 15*time.Second {
 		t.Fatalf("cancellation took %v", elapsed)
 	}
-	waitProcessGone(t, readPid(t, pidFile), 10*time.Second)
+	waitProcessGone(t, readPid(t, pidFile))
 
 	if n := registrationCount(t, dir); n != 1 {
 		t.Fatalf("canceled CreateContext left registrations behind: %d worktrees (want only main)", n)
@@ -366,7 +366,7 @@ func TestCreateContext_CancelDuringRefLookupKeepsForeignRef(t *testing.T) {
 	if _, err := worktree.CreateContext(ctx, dir, "HEAD"); err == nil {
 		t.Fatal("expected CreateContext to be canceled")
 	}
-	waitProcessGone(t, readPid(t, pidFile), 10*time.Second)
+	waitProcessGone(t, readPid(t, pidFile))
 	if n := snapshotRefCount(t, dir); n != 1 {
 		t.Fatalf("canceled run deleted a ref it never created: %d refs left (want %s)", n, ref)
 	}
@@ -415,7 +415,7 @@ func TestReuseDepsContext_CancelKillsCpChild(t *testing.T) {
 	if elapsed > 15*time.Second {
 		t.Fatalf("cancellation took %v", elapsed)
 	}
-	waitProcessGone(t, readPid(t, pidFile), 10*time.Second)
+	waitProcessGone(t, readPid(t, pidFile))
 }
 
 // TestCreateContext_CleanupSurvivesCanceledRunContext covers the requirement

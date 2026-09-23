@@ -39,7 +39,7 @@ func parseMakefile(path string) (bundle.ProjectProfile, bool) {
 	if err != nil {
 		return bundle.ProjectProfile{}, false
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 	commands := make(map[string]bundle.Command)
 	sc := bufio.NewScanner(f)
 	// Handle long Makefile lines (default 64KB may truncate).

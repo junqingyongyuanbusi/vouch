@@ -23,9 +23,6 @@ func selectTypeScript(files []string, testCmd string) Selection {
 // testFilesOrSources keeps changed test files and passes source files through;
 // the runner resolves the reverse dependency set itself.
 func testFilesOrSources(files []string) []string {
-	out := make([]string, 0, len(files))
-	for _, f := range files {
-		out = append(out, f)
-	}
-	return out
+	// Pass-through today; the runner resolves the reverse dependency set itself.
+	return append(make([]string, 0, len(files)), files...)
 }

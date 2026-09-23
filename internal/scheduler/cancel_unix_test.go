@@ -72,7 +72,7 @@ func TestScheduler_WorktreeSetupCancelIsUnverifiedAndReapsChildren(t *testing.T)
 	if err != nil {
 		t.Fatal(err)
 	}
-	repo := scenarioRepo(t, goFiles("a + b")) // clean tree → stall lands on worktree add
+	repo := scenarioRepo(t, goFiles()) // clean tree → stall lands on worktree add
 	pidFile := filepath.Join(t.TempDir(), "stalled.pid")
 	shim := t.TempDir()
 	script := "#!/bin/sh\ncase \"$*\" in\n  *\"worktree add\"*)\n" +
@@ -134,7 +134,7 @@ func TestScheduler_CleanupFailureIsSurfaced(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	repo := scenarioRepo(t, goFiles("a + b"))
+	repo := scenarioRepo(t, goFiles())
 	shim := t.TempDir()
 	script := "#!/bin/sh\ncase \"$*\" in\n  *\"worktree remove\"*|*\"worktree prune\"*) exit 1 ;;\nesac\nexec " + shQ(realGit) + " \"$@\"\n"
 	if err := os.WriteFile(filepath.Join(shim, "git"), []byte(script), 0o755); err != nil {

@@ -56,7 +56,7 @@ const delinkBudget = 200 << 20 // 200 MiB
 
 // weakestDepsMode reduces the two sides of a pair to the isolation the pair
 // actually has. A pair is only as isolated as its weaker side: a cloned base
-// next to a hardlinked candidate can still leak, so it must report hardlink.
+// next to a hard-linked candidate can still leak, so it must report hardlink.
 func weakestDepsMode(a, b DepsMode) DepsMode {
 	rank := func(m DepsMode) int {
 		switch m {
@@ -211,7 +211,7 @@ func cowCopy(ctx context.Context, src, dst string, symlinked bool) (DepsMode, er
 	return DepsNone, nil
 }
 
-// delinkWritableState replaces hardlinked copies of known in-place-rewritten
+// delinkWritableState replaces hard-linked copies of known in-place-rewritten
 // paths with private ones: read the content, write a sibling temp file, rename
 // over the original. The rename is what breaks the link — writing through the
 // existing path would change the shared inode, which is the bug being fixed.
@@ -257,7 +257,7 @@ func delinkFile(path string, info fs.FileInfo) error {
 	if err != nil {
 		return err
 	}
-	defer src.Close()
+	defer func() { _ = src.Close() }()
 
 	tmp, err := os.CreateTemp(filepath.Dir(path), ".vouch-delink-*")
 	if err != nil {
@@ -271,7 +271,7 @@ func delinkFile(path string, info fs.FileInfo) error {
 	}()
 
 	if _, err := io.Copy(tmp, src); err != nil {
-		tmp.Close()
+		_ = tmp.Close()
 		return err
 	}
 	if err := tmp.Close(); err != nil {

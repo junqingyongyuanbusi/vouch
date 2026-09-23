@@ -65,8 +65,8 @@ func detectActions(repoRoot string) (bundle.ProjectProfile, bool) {
 					continue
 				}
 			}
-			if strat := findMappingValue(jobVal, "strategy"); strat != nil {
-				if mat := findMappingValue(strat, "matrix"); mat != nil {
+			if strategyNode := findMappingValue(jobVal, "strategy"); strategyNode != nil {
+				if mat := findMappingValue(strategyNode, "matrix"); mat != nil {
 					gaps = append(gaps, "workflow "+filepath.Base(path)+" job "+jobKey.Value+" has matrix, using first combination")
 					confidence = bundle.ConfidenceMedium
 				}

@@ -249,8 +249,8 @@ func (b ProofBundle) MarshalJSON() ([]byte, error) {
 	if aux.Profile.Commands == nil {
 		aux.Profile.Commands = map[string]Command{}
 	}
-	if aux.Alias.VouchVersion == "" {
-		aux.Alias.VouchVersion = VouchVersion()
+	if aux.VouchVersion == "" {
+		aux.VouchVersion = VouchVersion()
 	}
 	return json.Marshal(aux.Alias)
 }

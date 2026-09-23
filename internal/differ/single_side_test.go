@@ -2,11 +2,12 @@ package differ_test
 
 import (
 	"context"
+	"testing"
+	"time"
+
 	"github.com/junqingyongyuanbusi/vouch/internal/bundle"
 	"github.com/junqingyongyuanbusi/vouch/internal/differ"
 	"github.com/junqingyongyuanbusi/vouch/internal/probe"
-	"testing"
-	"time"
 )
 
 func TestArbitrate_SingleSideInstabilityCannotVerify(t *testing.T) {

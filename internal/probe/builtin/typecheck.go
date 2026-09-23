@@ -47,7 +47,7 @@ func (Typecheck) Run(ctx context.Context, in Input) (probe.RunResult, error) {
 	isTS := strings.Contains(in.Command, "tsc") || strings.Contains(in.Command, "typescript")
 	if len(diags) == 0 {
 		if exit == 0 {
-			data := dataOf(nil)
+			data := map[string]interface{}{}
 			data["diagnostics"] = []Diagnostic{}
 			data["exit_code"] = 0
 			return probe.RunResult{Verdict: probe.VerdictPass, Summary: "no diagnostics", Data: data}, nil
@@ -58,7 +58,7 @@ func (Typecheck) Run(ctx context.Context, in Input) (probe.RunResult, error) {
 		}
 		return probe.Inconclusive("tsc failed without parseable diagnostics", in.Role), nil
 	}
-	data := dataOf(nil)
+	data := map[string]interface{}{}
 	data["diagnostics"] = diags
 	data["exit_code"] = exit
 	return probe.RunResult{

@@ -31,7 +31,7 @@ func (Build) Run(ctx context.Context, in Input) (probe.RunResult, error) {
 	if missingRunner(out, exit) {
 		return probe.Inconclusive("runner not available ("+in.Command+")", in.Role), nil
 	}
-	data := dataOf(nil)
+	data := map[string]interface{}{}
 	data["exit_code"] = exit
 	if h, ok := ArtifactHash(in.Workdir); ok {
 		data["artifact_sha256"] = h

@@ -16,14 +16,14 @@ import (
 // a cache entry. This is the only write shape that crosses a hardlink, so the
 // isolation tests below must use it — a write-temp-then-rename would pass even
 // against the unfixed implementation.
-func writeInPlace(t *testing.T, path, content string) {
+func writeInPlace(t *testing.T, path string) {
 	t.Helper()
 	f, err := os.OpenFile(path, os.O_WRONLY|os.O_TRUNC, 0o644)
 	if err != nil {
 		t.Fatalf("open %s for in-place write: %v", path, err)
 	}
-	if _, err := f.Write([]byte(content)); err != nil {
-		f.Close()
+	if _, err := f.Write([]byte("mutated")); err != nil {
+		_ = f.Close()
 		t.Fatalf("write %s: %v", path, err)
 	}
 	if err := f.Close(); err != nil {
@@ -74,7 +74,7 @@ func TestReuseDeps_InPlaceWriteDoesNotLeak(t *testing.T) {
 	}
 
 	dstFile := filepath.Join(dst, "node_modules", "pkg", "state.json")
-	writeInPlace(t, dstFile, "mutated")
+	writeInPlace(t, dstFile)
 
 	if got := readDepFile(t, dstFile); got != "mutated" {
 		t.Fatalf("destination did not take the write: %q", got)
@@ -113,7 +113,7 @@ func TestReuseDeps_KnownCachePathIsDelinked(t *testing.T) {
 				t.Fatal("same-filesystem reuse must not fall back to a full install")
 			}
 
-			writeInPlace(t, filepath.Join(dst, "node_modules", rel), "mutated")
+			writeInPlace(t, filepath.Join(dst, "node_modules", rel))
 
 			if got := readDepFile(t, srcFile); got != "original" {
 				t.Fatalf("writable state path %s leaked into the source: %q (mode=%s)", rel, got, mode)
@@ -156,7 +156,7 @@ func TestReuseDeps_SymlinkedNodeModulesIsNotFakeReuse(t *testing.T) {
 	if fi, lerr := os.Lstat(dstLink); lerr == nil && fi.Mode()&os.ModeSymlink != 0 {
 		t.Fatalf("reuse reported %s but the destination is still a symlink: zero isolation", mode)
 	}
-	writeInPlace(t, filepath.Join(dstLink, "pkg", "state.json"), "mutated")
+	writeInPlace(t, filepath.Join(dstLink, "pkg", "state.json"))
 	if got := readDepFile(t, sharedFile); got != "original" {
 		t.Fatalf("reuse reported %s but writes reach the shared directory: %q", mode, got)
 	}
@@ -227,7 +227,7 @@ func TestReuseDeps_HardlinkFallbackIsDeclared(t *testing.T) {
 	}
 	// Even in the degraded mode the known writable state paths are de-linked:
 	// that is what keeps ordinary runs from polluting each other.
-	writeInPlace(t, filepath.Join(dst, "node_modules", ".vite", "deps.json"), "mutated")
+	writeInPlace(t, filepath.Join(dst, "node_modules", ".vite", "deps.json"))
 	if got := readDepFile(t, cacheFile); got != "original" {
 		t.Fatalf(".vite cache leaked under the hardlink fallback: %q", got)
 	}

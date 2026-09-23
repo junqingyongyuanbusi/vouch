@@ -170,13 +170,13 @@ func runVerify(cmd *cobra.Command, opts verifyOptions) error {
 				return &ExitError{Code: verdict.ExitCode(bundle.Unverified), Err: err}
 			}
 		} else {
-			fmt.Fprintln(cmd.OutOrStdout(), string(data))
+			_, _ = fmt.Fprintln(cmd.OutOrStdout(), string(data))
 		}
 	} else {
-		fmt.Fprint(cmd.OutOrStdout(), render.Human(res))
+		_, _ = fmt.Fprint(cmd.OutOrStdout(), render.Human(res))
 	}
 	if opts.explainGaps {
-		fmt.Fprint(cmd.OutOrStdout(), render.Gaps(res))
+		_, _ = fmt.Fprint(cmd.OutOrStdout(), render.Gaps(res))
 	}
 	if opts.output != "" && !opts.jsonOut {
 		data, _ := render.JSON(res)
@@ -222,21 +222,21 @@ func newShowCmd() *cobra.Command {
 			}
 			if jsonOut {
 				data, _ := json.MarshalIndent(b, "", "  ")
-				fmt.Fprintln(cmd.OutOrStdout(), string(data))
+				_, _ = fmt.Fprintln(cmd.OutOrStdout(), string(data))
 				return nil
 			}
 			if mdOut {
-				fmt.Fprint(cmd.OutOrStdout(), render.Markdown(b))
+				_, _ = fmt.Fprint(cmd.OutOrStdout(), render.Markdown(b))
 				return nil
 			}
-			fmt.Fprintf(cmd.OutOrStdout(), "%s  bundle=%s  base=%s\n", b.Verdict, b.BundleID, b.Subject.BaseRef)
+			_, _ = fmt.Fprintf(cmd.OutOrStdout(), "%s  bundle=%s  base=%s\n", b.Verdict, b.BundleID, b.Subject.BaseRef)
 			if b.BaselineSummary != nil {
-				fmt.Fprintf(cmd.OutOrStdout(), "  base: %s (failing=%d)\n", b.BaselineSummary.Status, b.BaselineSummary.Failing)
+				_, _ = fmt.Fprintf(cmd.OutOrStdout(), "  base: %s (failing=%d)\n", b.BaselineSummary.Status, b.BaselineSummary.Failing)
 			}
 			for _, ev := range b.Evidence {
-				fmt.Fprintf(cmd.OutOrStdout(), "  %-9s %s  %s\n", ev.Probe, ev.Verdict, ev.Reproduce)
+				_, _ = fmt.Fprintf(cmd.OutOrStdout(), "  %-9s %s  %s\n", ev.Probe, ev.Verdict, ev.Reproduce)
 				for _, f := range ev.Failures {
-					fmt.Fprintf(cmd.OutOrStdout(), "      · %s: %s\n", f.ID, f.Message)
+					_, _ = fmt.Fprintf(cmd.OutOrStdout(), "      · %s: %s\n", f.ID, f.Message)
 				}
 			}
 			return nil
@@ -291,7 +291,7 @@ func newRerunCmd() *cobra.Command {
 				fmt.Fprintf(os.Stderr, "vouch rerun: %v\n", err)
 				return &ExitError{Code: verdict.ExitCode(bundle.Unverified), Err: err}
 			}
-			fmt.Fprint(cmd.OutOrStdout(), render.Rerun(res, b.BundleID))
+			_, _ = fmt.Fprint(cmd.OutOrStdout(), render.Rerun(res, b.BundleID))
 			return &ExitError{Code: verdict.ExitCode(res.Verdict)}
 		},
 	}
@@ -346,7 +346,7 @@ func newGCCmd() *cobra.Command {
 				fmt.Fprintf(os.Stderr, "vouch gc: %v\n", err)
 				return &ExitError{Code: verdict.ExitCode(bundle.Unverified), Err: err}
 			}
-			fmt.Fprintf(cmd.OutOrStdout(), "gc: removed %d bundle(s), %d snapshot ref(s)\n", removedBundles, removedRefs)
+			_, _ = fmt.Fprintf(cmd.OutOrStdout(), "gc: removed %d bundle(s), %d snapshot ref(s)\n", removedBundles, removedRefs)
 			return nil
 		},
 	}
@@ -430,12 +430,12 @@ func newInitCmd() *cobra.Command {
 					fmt.Fprintf(os.Stderr, "vouch init: %v\n", err)
 					return &ExitError{Code: verdict.ExitCode(bundle.Unverified), Err: err}
 				}
-				fmt.Fprintf(cmd.OutOrStdout(), "✓ .mcp.json MCP server: %s\n", rep.MCP)
-				fmt.Fprintf(cmd.OutOrStdout(), "✓ .claude/settings.json Stop hook: %s\n", rep.Hook)
-				fmt.Fprintln(cmd.OutOrStdout(), "  Claude Code can now call vouch_verify while it works, and vouch runs when it claims to be done.")
-				fmt.Fprintln(cmd.OutOrStdout(), "  BROKEN blocks the agent (exit 2 + evidence on stderr); UNVERIFIED only reports the reason.")
+				_, _ = fmt.Fprintf(cmd.OutOrStdout(), "✓ .mcp.json MCP server: %s\n", rep.MCP)
+				_, _ = fmt.Fprintf(cmd.OutOrStdout(), "✓ .claude/settings.json Stop hook: %s\n", rep.Hook)
+				_, _ = fmt.Fprintln(cmd.OutOrStdout(), "  Claude Code can now call vouch_verify while it works, and vouch runs when it claims to be done.")
+				_, _ = fmt.Fprintln(cmd.OutOrStdout(), "  BROKEN blocks the agent (exit 2 + evidence on stderr); UNVERIFIED only reports the reason.")
 				if rep.Warn != "" {
-					fmt.Fprintf(cmd.OutOrStdout(), "⚠ %s\n", rep.Warn)
+					_, _ = fmt.Fprintf(cmd.OutOrStdout(), "⚠ %s\n", rep.Warn)
 				}
 				return nil
 			default:

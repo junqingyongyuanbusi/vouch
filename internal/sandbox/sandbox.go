@@ -72,7 +72,7 @@ func Run(ctx context.Context, workdir, command string, policy Policy) (Result, e
 	var directOut, directErr bytes.Buffer
 	direct.Stdout = &directOut
 	direct.Stderr = &directErr
-	runErr := runWatched(ctx, direct)
+	runErr := runWatched(direct)
 	fallback := Result{
 		Stdout:    directOut.String(),
 		Stderr:    directErr.String(),
@@ -97,7 +97,7 @@ func runOnce(ctx context.Context, workdir, command string, policy Policy) (Resul
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
 
-	err := runWatched(ctx, cmd)
+	err := runWatched(cmd)
 	res := Result{
 		Stdout:    stdout.String(),
 		Stderr:    stderr.String(),
@@ -220,13 +220,14 @@ func withNodeBin(workdir string) []string {
 }
 
 // runWatched runs cmd in its own process group and kills the whole group when
-// ctx expires, so a deadline bounds the entire process tree (not just the shell).
+// the context baked into cmd expires (via exec.CommandContext), so a deadline
+// bounds the entire process tree (not just the shell).
 //
 // The kill goes through os/exec's own cancel hook: the runtime stops invoking
 // Cancel once Wait returns, so a deadline can never deliver SIGKILL to a process
 // group the OS has already recycled. WaitDelay bounds Wait even when a child
 // ignores the signal (and stops its pipes from pinning Wait forever).
-func runWatched(ctx context.Context, cmd *exec.Cmd) error {
+func runWatched(cmd *exec.Cmd) error {
 	setupProcessGroup(cmd)
 	cmd.Cancel = func() error {
 		if cmd.Process != nil {

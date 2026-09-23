@@ -160,7 +160,7 @@ func ParseVitest(out []byte, workdir string) (TestResult, error) {
 		}
 	}
 	// Suite-level failure must never be masked by unrelated case-level failures.
-	if rep.Success == false && rep.NumFailedTestSuites > 0 && !suiteReported {
+	if !rep.Success && rep.NumFailedTestSuites > 0 && !suiteReported {
 		res.Failed = append(res.Failed, "(test-suites)::(suite)")
 		res.Failures = append(res.Failures, Failure{ID: "(test-suites)::(suite)", Message: "test suites failed without case-level detail"})
 	}

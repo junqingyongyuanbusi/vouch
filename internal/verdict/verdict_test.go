@@ -30,8 +30,8 @@ func ev(probe string, v bundle.EvidenceVerdict) bundle.Evidence {
 	}
 }
 
-func evWithDelta(probe string, v bundle.EvidenceVerdict, d bundle.Delta) bundle.Evidence {
-	e := ev(probe, v)
+func evWithDelta(v bundle.EvidenceVerdict, d bundle.Delta) bundle.Evidence {
+	e := ev("test", v)
 	e.Delta = d
 	return e
 }
@@ -73,7 +73,7 @@ func TestAggregate_Singletons(t *testing.T) {
 
 func TestAggregate_V2SpecRemovedAndSkip(t *testing.T) {
 	// Removed_tests / skip_changes alone must stay VERIFIED but surface warning (v2 fix).
-	evRemoved := evWithDelta("test", bundle.EvidencePass, bundle.Delta{RemovedTests: []string{"old.spec::flaky"}})
+	evRemoved := evWithDelta(bundle.EvidencePass, bundle.Delta{RemovedTests: []string{"old.spec::flaky"}})
 	r := verdict.Aggregate([]bundle.Evidence{evRemoved})
 	if r.Verdict != bundle.Verified {
 		t.Fatalf("removed_tests with pass → got %v want VERIFIED", r.Verdict)
@@ -82,7 +82,7 @@ func TestAggregate_V2SpecRemovedAndSkip(t *testing.T) {
 		t.Fatal("expected warning for removed_tests")
 	}
 
-	evSkip := evWithDelta("test", bundle.EvidencePass, bundle.Delta{SkipChanges: []string{"slow.spec::heavy"}})
+	evSkip := evWithDelta(bundle.EvidencePass, bundle.Delta{SkipChanges: []string{"slow.spec::heavy"}})
 	r = verdict.Aggregate([]bundle.Evidence{evSkip})
 	if r.Verdict != bundle.Verified {
 		t.Fatalf("skip_changes with pass → got %v want VERIFIED", r.Verdict)
@@ -133,7 +133,7 @@ func TestAggregate_PriorityAndCombination(t *testing.T) {
 	})
 	t.Run("pass + removed + fail → BROKEN with warning preserved", func(t *testing.T) {
 		r := verdict.Aggregate([]bundle.Evidence{
-			evWithDelta("test", bundle.EvidenceFail, bundle.Delta{RemovedTests: []string{"x"}}),
+			evWithDelta(bundle.EvidenceFail, bundle.Delta{RemovedTests: []string{"x"}}),
 			ev("build", bundle.EvidencePass),
 		})
 		if r.Verdict != bundle.Broken {
@@ -145,7 +145,7 @@ func TestAggregate_PriorityAndCombination(t *testing.T) {
 	})
 	t.Run("pass + inconclusive + removed → UNVERIFIED with warning", func(t *testing.T) {
 		r := verdict.Aggregate([]bundle.Evidence{
-			evWithDelta("test", bundle.EvidencePass, bundle.Delta{RemovedTests: []string{"x"}}),
+			evWithDelta(bundle.EvidencePass, bundle.Delta{RemovedTests: []string{"x"}}),
 			ev("build", bundle.EvidenceInconclusive),
 		})
 		if r.Verdict != bundle.Unverified {
@@ -172,7 +172,7 @@ func TestExitCode(t *testing.T) {
 func TestAggregate_FlakyAndRegressionsDoNotAffectVerdict(t *testing.T) {
 	// Defensive invariant: Differ must set fail when regressions non-empty.
 	// Aggregate demotes illegal pass+regressions to UNVERIFIED to avoid hiding a regression.
-	e := evWithDelta("test", bundle.EvidencePass, bundle.Delta{Regressions: []string{"should-have-been-fail"}})
+	e := evWithDelta(bundle.EvidencePass, bundle.Delta{Regressions: []string{"should-have-been-fail"}})
 	r := verdict.Aggregate([]bundle.Evidence{e})
 	if r.Verdict != bundle.Unverified {
 		t.Fatalf("pass+regressions must be demoted to UNVERIFIED, got %v", r.Verdict)

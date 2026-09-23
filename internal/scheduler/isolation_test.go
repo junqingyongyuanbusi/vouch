@@ -37,7 +37,7 @@ func treeDigest(t *testing.T, root string) string {
 		if err != nil {
 			return err
 		}
-		defer f.Close()
+		defer func() { _ = f.Close() }()
 		h := sha256.New()
 		if _, err := io.Copy(h, f); err != nil {
 			return err
@@ -55,7 +55,7 @@ func treeDigest(t *testing.T, root string) string {
 	sort.Slice(entries, func(i, j int) bool { return entries[i].path < entries[j].path })
 	h := sha256.New()
 	for _, e := range entries {
-		fmt.Fprintf(h, "%s %s\n", e.path, e.sum)
+		_, _ = fmt.Fprintf(h, "%s %s\n", e.path, e.sum)
 	}
 	return hex.EncodeToString(h.Sum(nil))
 }

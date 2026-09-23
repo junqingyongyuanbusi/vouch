@@ -59,7 +59,7 @@ func newHookCmd() *cobra.Command {
 			case "claude-code":
 				return claudeCodeHook(cmd, opts, payload)
 			default:
-				fmt.Fprintf(cmd.ErrOrStderr(), "vouch hook: unsupported agent %q (P1 supports: claude-code)\n", args[0])
+				_, _ = fmt.Fprintf(cmd.ErrOrStderr(), "vouch hook: unsupported agent %q (P1 supports: claude-code)\n", args[0])
 				// Unknown agent: never block, never fail the agent loop.
 				return &ExitError{Code: 0}
 			}
@@ -88,19 +88,19 @@ func claudeCodeHook(cmd *cobra.Command, opts hookOptions, payload agentHookPaylo
 	}
 	res, runErr := hookVerify(cmd, opts)
 	if runErr != nil {
-		fmt.Fprintf(cmd.ErrOrStderr(), "vouch hook: %v\n", runErr)
+		_, _ = fmt.Fprintf(cmd.ErrOrStderr(), "vouch hook: %v\n", runErr)
 		return &ExitError{Code: 0} // fail open: a broken verifier must not block
 	}
 	switch res.Verdict {
 	case bundle.Broken:
-		fmt.Fprint(cmd.ErrOrStderr(), render.AgentFeedback(res))
+		_, _ = fmt.Fprint(cmd.ErrOrStderr(), render.AgentFeedback(res))
 		return &ExitError{Code: 2}
 	case bundle.Unverified:
 		// Printed so the reason lands in the transcript; stdout does not block.
-		fmt.Fprint(cmd.OutOrStdout(), render.AgentFeedback(res))
+		_, _ = fmt.Fprint(cmd.OutOrStdout(), render.AgentFeedback(res))
 		return &ExitError{Code: 0}
 	default:
-		fmt.Fprint(cmd.OutOrStdout(), render.AgentFeedback(res))
+		_, _ = fmt.Fprint(cmd.OutOrStdout(), render.AgentFeedback(res))
 		return &ExitError{Code: 0}
 	}
 }

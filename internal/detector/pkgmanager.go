@@ -15,11 +15,11 @@ func detectPkgManager(repoRoot string) (bundle.ProjectProfile, bool) {
 		return p, true
 	}
 	// Cargo.toml
-	if p, ok := parseCargoToml(filepath.Join(repoRoot, "Cargo.toml"), repoRoot); ok {
+	if p, ok := parseCargoToml(filepath.Join(repoRoot, "Cargo.toml")); ok {
 		return p, true
 	}
 	// pyproject.toml
-	if p, ok := parsePyProject(filepath.Join(repoRoot, "pyproject.toml"), repoRoot); ok {
+	if p, ok := parsePyProject(filepath.Join(repoRoot, "pyproject.toml")); ok {
 		return p, true
 	}
 	// go.mod
@@ -106,7 +106,7 @@ func parsePackageJSON(path, repoRoot string) (bundle.ProjectProfile, bool) {
 	}, true
 }
 
-func parseCargoToml(path, repoRoot string) (bundle.ProjectProfile, bool) {
+func parseCargoToml(path string) (bundle.ProjectProfile, bool) {
 	if _, err := os.Stat(path); err != nil {
 		return bundle.ProjectProfile{}, false
 	}
@@ -122,7 +122,7 @@ func parseCargoToml(path, repoRoot string) (bundle.ProjectProfile, bool) {
 	}, true
 }
 
-func parsePyProject(path, repoRoot string) (bundle.ProjectProfile, bool) {
+func parsePyProject(path string) (bundle.ProjectProfile, bool) {
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return bundle.ProjectProfile{}, false

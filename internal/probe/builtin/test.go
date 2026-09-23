@@ -66,7 +66,7 @@ func (Test) Run(ctx context.Context, in Input) (probe.RunResult, error) {
 		// exit code rather than silently passing.
 		verdict = probe.VerdictFail
 	}
-	data := dataOf(nil)
+	data := map[string]interface{}{}
 	data["passed"] = res.Passed
 	data["failed"] = res.Failed
 	data["skipped"] = res.Skipped

@@ -108,10 +108,10 @@ func write(t *testing.T, dir, rel, content string) {
 	}
 }
 
-func goFiles(impl string) map[string]string {
+func goFiles() map[string]string {
 	return map[string]string{
 		"go.mod":       "module example.com/fixture\n\ngo 1.24\n",
-		"calc.go":      "package fixture\n\nfunc Add(a, b int) int {\n\treturn " + impl + "\n}\n",
+		"calc.go":      "package fixture\n\nfunc Add(a, b int) int {\n\treturn a + b\n}\n",
 		"calc_test.go": "package fixture\n\nimport \"testing\"\n\nfunc TestAdd(t *testing.T) {\n\tif Add(1, 2) != 3 {\n\t\tt.Fatalf(\"Add(1,2) = %d, want 3\", Add(1, 2))\n\t}\n}\n",
 	}
 }
@@ -134,7 +134,7 @@ func run(t *testing.T, repo string, cfg scheduler.Config) scheduler.Result {
 // ---------- Go scenarios ----------
 
 func TestScenarioGo_NoChangeVerified(t *testing.T) {
-	repo := scenarioRepo(t, goFiles("a + b"))
+	repo := scenarioRepo(t, goFiles())
 	res := run(t, repo, scheduler.Config{BaseRef: "HEAD", DisableCache: true})
 	if res.Verdict != bundle.Verified {
 		t.Fatalf("verdict=%s warnings=%v unverified=%v", res.Verdict, res.Warnings, res.Unverified)
@@ -148,7 +148,7 @@ func TestScenarioGo_NoChangeVerified(t *testing.T) {
 }
 
 func TestScenarioGo_InjectedRegressionBroken(t *testing.T) {
-	repo := scenarioRepo(t, goFiles("a + b"))
+	repo := scenarioRepo(t, goFiles())
 	write(t, repo, "calc.go", "package fixture\n\nfunc Add(a, b int) int {\n\treturn a - b\n}\n")
 	res := run(t, repo, scheduler.Config{BaseRef: "HEAD", DisableCache: true})
 	if res.Verdict != bundle.Broken {
@@ -162,7 +162,7 @@ func TestScenarioGo_InjectedRegressionBroken(t *testing.T) {
 func TestScenarioGo_RemovedFailingTestIsVerifiedWithWarning(t *testing.T) {
 	// base has a failing test (existing failure), candidate deletes it: no
 	// regression on diff semantics, but the deletion must be surfaced.
-	files := goFiles("a + b")
+	files := goFiles()
 	files["extra_test.go"] = "package fixture\n\nimport \"testing\"\n\nfunc TestKnownBad(t *testing.T) {\n\tt.Fatal(\"pre-existing failure\")\n}\n"
 	repo := scenarioRepo(t, files)
 	if err := os.Remove(filepath.Join(repo, "extra_test.go")); err != nil {
@@ -182,7 +182,7 @@ func TestScenarioGo_RemovedFailingTestIsVerifiedWithWarning(t *testing.T) {
 }
 
 func TestScenarioGo_BaseCacheHitSkipsBase(t *testing.T) {
-	repo := scenarioRepo(t, goFiles("a + b"))
+	repo := scenarioRepo(t, goFiles())
 	first := run(t, repo, scheduler.Config{BaseRef: "HEAD"})
 	if first.Verdict != bundle.Verified {
 		t.Fatalf("first verdict=%s", first.Verdict)
@@ -329,7 +329,7 @@ func TestFlaky(t *testing.T) {
 // ---------- pure addition ----------
 
 func TestScenarioGo_PureAdditionVerified(t *testing.T) {
-	repo := scenarioRepo(t, goFiles("a + b"))
+	repo := scenarioRepo(t, goFiles())
 	write(t, repo, "mul.go", "package fixture\n\nfunc Mul(a, b int) int {\n\treturn a * b\n}\n")
 	write(t, repo, "mul_test.go", "package fixture\n\nimport \"testing\"\n\nfunc TestMul(t *testing.T) {\n\tif Mul(2, 3) != 6 {\n\t\tt.Fatal(\"bad\")\n\t}\n}\n")
 	res := run(t, repo, scheduler.Config{BaseRef: "HEAD", DisableCache: true})
@@ -342,7 +342,7 @@ func TestScenarioGo_PureAdditionVerified(t *testing.T) {
 }
 
 func TestScenarioGo_CacheMissAfterNewCommit(t *testing.T) {
-	repo := scenarioRepo(t, goFiles("a + b"))
+	repo := scenarioRepo(t, goFiles())
 	if res := run(t, repo, scheduler.Config{BaseRef: "HEAD"}); res.Verdict != bundle.Verified {
 		t.Fatalf("first run: %s", res.Verdict)
 	}
@@ -386,7 +386,7 @@ func TestScheduler_ZeroEvidenceHasNoAllGreenBaseline(t *testing.T) {
 // diff files / diff sha / bundle id must describe the target repo even when the
 // process cwd is a different repository.
 func TestScheduler_DiffIdentity_IndependentOfCwd(t *testing.T) {
-	repo := scenarioRepo(t, goFiles("a + b"))
+	repo := scenarioRepo(t, goFiles())
 	clean := run(t, repo, scheduler.Config{BaseRef: "HEAD", DisableCache: true})
 
 	// pure untracked addition: must change diff identity
@@ -528,7 +528,7 @@ func TestScheduler_BudgetExhaustionRecordsUnverifiedClaims(t *testing.T) {
 	// tool error (an agent cannot act on "signal: killed") and not as a silent
 	// pass. The parent deadline is pre-expired so the stage under test is
 	// deterministic instead of racing a 1ms budget against a git exec.
-	repo := scenarioRepo(t, goFiles("a + b"))
+	repo := scenarioRepo(t, goFiles())
 	parent, cancelParent := context.WithDeadline(context.Background(), time.Now().Add(-time.Second))
 	defer cancelParent()
 	res, err := scheduler.Run(parent, scheduler.Config{
@@ -626,11 +626,8 @@ func TestScheduler_RemainingBudgetCapsProbeAndTrimsTheRest(t *testing.T) {
 }
 
 func TestScenarioPython_FlakyAbsorbed(t *testing.T) {
-	if cmd, ok := pythonTestCommand(); !ok {
+	if _, ok := pythonTestCommand(); !ok {
 		t.Skip("pytest unavailable (neither pytest nor python3 -m pytest)")
-	} else if strings.HasPrefix(cmd, "python3") {
-		// proceed: detector emits "pytest -q"; the CI installs pytest so the bare
-		// binary exists, but locally we only require python3 -m pytest.
 	}
 	t.Setenv("VOUCH_FLAKY_TOKEN", fmt.Sprintf("%s-%d", t.Name(), os.Getpid()))
 	repo := scenarioRepo(t, map[string]string{
@@ -745,7 +742,7 @@ describe("known bad", () => { it("always fails", () => expect(1).toBe(2)) })
 }
 
 func TestScheduler_PersistsBundleForReproduce(t *testing.T) {
-	repo := scenarioRepo(t, goFiles("a + b"))
+	repo := scenarioRepo(t, goFiles())
 	res := run(t, repo, scheduler.Config{BaseRef: "HEAD", DisableCache: true})
 	path := filepath.Join(repo, ".vouch", "bundles", res.Bundle.BundleID, "bundle.json")
 	if _, err := os.Stat(path); err != nil {
@@ -768,7 +765,7 @@ func TestScheduler_PersistsBundleForReproduce(t *testing.T) {
 }
 
 func TestScheduler_IdenticalRunsShareBundleIdentity(t *testing.T) {
-	repo := scenarioRepo(t, goFiles("a + b"))
+	repo := scenarioRepo(t, goFiles())
 	first := run(t, repo, scheduler.Config{BaseRef: "HEAD"}) // writes .vouch/cache
 	second := run(t, repo, scheduler.Config{BaseRef: "HEAD"})
 	if first.Bundle.BundleID != second.Bundle.BundleID {
@@ -803,7 +800,7 @@ func pythonTestCommand() (string, bool) {
 func TestScenarioGo_BranchRangeBroken(t *testing.T) {
 	// Two committed refs: base = first commit, candidate = second commit. The
 	// worktree is clean, so only an explicit --to can select the candidate.
-	repo := scenarioRepo(t, goFiles("a + b"))
+	repo := scenarioRepo(t, goFiles())
 	base := strings.TrimSpace(gitOutput(t, repo, "rev-parse", "HEAD"))
 	write(t, repo, "calc.go", "package fixture\n\nfunc Add(a, b int) int {\n\treturn a - b\n}\n")
 	gitRun(t, repo, "add", "-A")
@@ -869,7 +866,7 @@ func TestScheduler_DependencyGapsAreRecorded(t *testing.T) {
 
 func TestRerun_ReproducesFlakyAndRegression(t *testing.T) {
 	// Regression: verify BROKEN → rerun must also be BROKEN.
-	repo := scenarioRepo(t, goFiles("a + b"))
+	repo := scenarioRepo(t, goFiles())
 	write(t, repo, "calc.go", "package fixture\n\nfunc Add(a, b int) int {\n\treturn a - b\n}\n")
 	res := run(t, repo, scheduler.Config{BaseRef: "HEAD", DisableCache: true})
 	if res.Verdict != bundle.Broken {
@@ -1110,7 +1107,7 @@ func TestScenarioTypeScript_NarrowedEmptyFallsBackToFullSuite(t *testing.T) {
 }
 
 func TestScheduler_SetupTimeoutPreservesStoredEvidence(t *testing.T) {
-	repo := scenarioRepo(t, goFiles("a + b"))
+	repo := scenarioRepo(t, goFiles())
 	good := run(t, repo, scheduler.Config{BaseRef: "HEAD", DisableCache: true})
 	if good.Verdict != bundle.Verified || len(good.Bundle.Evidence) == 0 || good.Bundle.Subject.CandidateRef == nil {
 		t.Fatalf("expected persisted clean verification: %+v", good)
@@ -1146,7 +1143,7 @@ func TestScheduler_SetupTimeoutPreservesStoredEvidence(t *testing.T) {
 }
 
 func TestScheduler_PersistsFailureDetail(t *testing.T) {
-	repo := scenarioRepo(t, goFiles("a + b"))
+	repo := scenarioRepo(t, goFiles())
 	write(t, repo, "calc.go", "package fixture\n\nfunc Add(a, b int) int {\n\treturn a - b\n}\n")
 	res := run(t, repo, scheduler.Config{BaseRef: "HEAD", DisableCache: true})
 	if res.Verdict != bundle.Broken {
