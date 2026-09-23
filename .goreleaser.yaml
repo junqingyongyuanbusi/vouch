@@ -1,3 +1,5 @@
+version: 2
+
 project_name: vouch
 builds:
   - id: vouch
@@ -50,5 +52,3 @@ nfpms:
         dst: /usr/share/doc/vouch/LICENSE
       - src: README.md
         dst: /usr/share/doc/vouch/README.md
-announce:
-  skip: true
